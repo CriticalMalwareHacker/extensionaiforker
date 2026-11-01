@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  --fl-canvas: #151515;
+  --fl-surface: #1d1d1d;
+  --fl-surface-raised: #242424;
+  --fl-border: #303030;
+  --fl-text: #f0f0f0;
+  --fl-muted: #9a9a9a;
+  --fl-subtle: #696969;
+}
+
+.forkline-app {
+  background: var(--fl-canvas) !important;
+  color: var(--fl-text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: -0.015em;
+}
+
+.forkline-topbar {
+  background: var(--fl-canvas) !important;
+  border-color: var(--fl-border) !important;
+  padding: 18px 16px 14px !important;
+  gap: 14px !important;
+}
+
+.forkline-topbar button, .forkline-filters button, .branch-card button {
+  border-radius: 999px !important;
+}
+
+.forkline-topbar > div:first-child > div:first-child > div:first-child {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  background: var(--fl-surface) !important;
+  border-color: var(--fl-border) !important;
+}
+
+.forkline-topbar span { color: var(--fl-text); }
+.forkline-topbar > div:nth-child(2) > div {
+  border-radius: 18px !important;
+  background: var(--fl-surface) !important;
+  border-color: var(--fl-border) !important;
+  padding: 3px !important;
+}
+
+.forkline-topbar > div:nth-child(3) > div {
+  background: var(--fl-surface) !important;
+  border-color: var(--fl-border) !important;
+  border-radius: 16px !important;
+  padding: 11px 13px !important;
+}
+
+.forkline-filters {
+  background: var(--fl-canvas) !important;
+  border-color: var(--fl-border) !important;
+  padding: 12px 16px 14px !important;
+  gap: 10px !important;
+}
+
+.forkline-filters > div:first-child {
+  background: var(--fl-surface) !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  padding: 9px 13px !important;
+}
+.forkline-filters input { font-size: 13px !important; }
+.forkline-filters button { min-height: 28px; border-color: var(--fl-border) !important; }
+
+.branch-grid {
+  background: var(--fl-canvas);
+  padding: 16px !important;
+  gap: 14px !important;
+}
+.branch-group-label {
+  color: var(--fl-muted) !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: .08em !important;
+  padding: 10px 4px 2px !important;
+}
+.branch-card {
+  background: var(--fl-surface) !important;
+  border: 1px solid var(--fl-border) !important;
+  border-radius: 18px !important;
+  box-shadow: none !important;
+  padding: 16px !important;
+  gap: 14px !important;
+}
+.branch-card:hover { background: var(--fl-surface-raised) !important; border-color: #454545 !important; }
+.branch-card [data-active="true"] { box-shadow: 0 0 0 2px #eee !important; }
+
+.react-flow { background: var(--fl-canvas) !important; }
+.react-flow__controls { border-radius: 16px !important; overflow: hidden; }

@@ -1,6 +1,17 @@
 import React, { useState } from "react";
 import { BranchNode, BranchGroup, Site } from "../shared/types";
-import { ExternalLink, GitMerge, Trash2, Cpu, MessageSquare, Folder, ChevronDown, Check } from "lucide-react";
+import {
+  ExternalLink,
+  GitMerge,
+  Trash2,
+  Cpu,
+  MessageSquare,
+  Folder,
+  ChevronDown,
+  Check,
+  Pencil,
+  X,
+} from "lucide-react";
 
 interface BentoGridViewProps {
   nodes: BranchNode[];
@@ -13,6 +24,7 @@ interface BentoGridViewProps {
   onMergeNode: (node: BranchNode) => void;
   onDeleteNode: (nodeId: string) => void;
   onAssignGroup: (nodeId: string, groupId: string | null) => void;
+  onRenameNode: (nodeId: string, newLabel: string) => void;
 }
 
 export const BentoGridView: React.FC<BentoGridViewProps> = ({
@@ -26,8 +38,11 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   onMergeNode,
   onDeleteNode,
   onAssignGroup,
+  onRenameNode,
 }) => {
   const [openGroupDropdownNodeId, setOpenGroupDropdownNodeId] = useState<string | null>(null);
+  const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
+  const [editingLabel, setEditingLabel] = useState("");
 
   const filteredNodes = nodes.filter((n) => {
     const matchesSearch =
@@ -49,6 +64,25 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   const getGroupName = (groupId?: string | null) => {
     if (!groupId) return null;
     return groups.find((g) => g.id === groupId)?.name || null;
+  };
+
+  const handleStartRename = (node: BranchNode, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingNodeId(node.id);
+    setEditingLabel(node.label);
+  };
+
+  const handleSaveRename = (nodeId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    if (editingLabel.trim()) {
+      onRenameNode(nodeId, editingLabel.trim());
+    }
+    setEditingNodeId(null);
+  };
+
+  const handleCancelRename = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    setEditingNodeId(null);
   };
 
   if (filteredNodes.length === 0) {
@@ -95,6 +129,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
         );
         const groupName = getGroupName(node.groupId);
         const isDropdownOpen = openGroupDropdownNodeId === node.id;
+        const isEditing = editingNodeId === node.id;
 
         return (
           <div
@@ -283,11 +318,111 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
               </div>
             </div>
 
-            {/* Title / Turn preview */}
+            {/* Title / Rename Row */}
             <div>
-              <div style={{ fontSize: "13px", fontWeight: "600", color: "#fafafa", lineHeight: "1.4" }}>
-                {node.label}
-              </div>
+              {isEditing ? (
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "6px" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="text"
+                    value={editingLabel}
+                    onChange={(e) => setEditingLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveRename(node.id, e);
+                      if (e.key === "Escape") handleCancelRename(e);
+                    }}
+                    autoFocus
+                    style={{
+                      flex: 1,
+                      backgroundColor: "#000000",
+                      border: "1px solid #ffffff",
+                      borderRadius: "5px",
+                      color: "#ffffff",
+                      fontSize: "13px",
+                      padding: "4px 8px",
+                      outline: "none",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                  <button
+                    onClick={(e) => handleSaveRename(node.id, e)}
+                    title="Save title"
+                    style={{
+                      background: "#ffffff",
+                      color: "#000000",
+                      border: "none",
+                      borderRadius: "4px",
+                      padding: "5px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Check size={12} />
+                  </button>
+                  <button
+                    onClick={handleCancelRename}
+                    title="Cancel"
+                    style={{
+                      background: "transparent",
+                      color: "#a1a1aa",
+                      border: "1px solid #27272a",
+                      borderRadius: "4px",
+                      padding: "5px",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: "6px",
+                    group: "title-container",
+                  }}
+                >
+                  <div
+                    style={{ fontSize: "13px", fontWeight: "600", color: "#fafafa", lineHeight: "1.4", flex: 1 }}
+                    title="Double-click to rename"
+                    onDoubleClick={(e) => handleStartRename(node, e)}
+                  >
+                    {node.label}
+                  </div>
+                  <button
+                    onClick={(e) => handleStartRename(node, e)}
+                    title="Rename branch"
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#71717a",
+                      cursor: "pointer",
+                      padding: "2px",
+                      display: "flex",
+                      alignItems: "center",
+                      opacity: 0.7,
+                      transition: "opacity 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "1";
+                      (e.currentTarget as HTMLElement).style.color = "#ffffff";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.opacity = "0.7";
+                      (e.currentTarget as HTMLElement).style.color = "#71717a";
+                    }}
+                  >
+                    <Pencil size={12} />
+                  </button>
+                </div>
+              )}
               <div style={{ fontSize: "11px", color: "#71717a", marginTop: "3px" }}>
                 Forked at message #{((node.forkedAtIndex ?? 0) + 1)}
               </div>

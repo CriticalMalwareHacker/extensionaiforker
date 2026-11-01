@@ -14,6 +14,14 @@ console.log("[Forkline] Content script initialized on:", window.location.href);
 
 const adapter = getAdapterForUrl(window.location.href);
 
+function hasExtensionContext(): boolean {
+  try {
+    return Boolean(chrome.runtime?.id);
+  } catch {
+    return false;
+  }
+}
+
 if (!adapter) {
   console.debug("[Forkline] No matching adapter for current URL.");
 } else {
@@ -23,25 +31,32 @@ if (!adapter) {
   let activeNodeId: string | null = null;
 
   // 1. Check for pending fork payload to inject into this chat
-  chrome.runtime.sendMessage(
-    { type: "GET_PENDING_PAYLOAD" } as ExtensionMessage,
-    (response) => {
-      if (chrome.runtime.lastError) {
-        console.debug("[Forkline] Runtime error checking payload:", chrome.runtime.lastError);
-        return;
+  if (hasExtensionContext()) {
+    chrome.runtime.sendMessage(
+      { type: "GET_PENDING_PAYLOAD" } as ExtensionMessage,
+      (response) => {
+        if (chrome.runtime.lastError) {
+          console.debug("[Forkline] Runtime error checking payload:", chrome.runtime.lastError);
+          return;
+        }
+        if (response?.payload) {
+          const payload: ForkPayload = response.payload;
+          activeNodeId = payload.nodeId;
+          injectForkPayload(adapter, payload).finally(() => {
+            if (hasExtensionContext()) {
+              chrome.runtime.sendMessage({ type: "ACK_PENDING_PAYLOAD" } as ExtensionMessage);
+            }
+          });
+        }
       }
-      if (response?.payload) {
-        const payload: ForkPayload = response.payload;
-        activeNodeId = payload.nodeId;
-        injectForkPayload(adapter, payload);
-      }
-    }
-  );
+    );
+  }
 
   // 2. Debounced button injection
   let debounceTimer: any = null;
 
   function scheduleButtonInjection() {
+    if (!hasExtensionContext()) return;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       injectForkButtons(adapter, (index, customOptions) => {
@@ -59,12 +74,16 @@ if (!adapter) {
       targetSites?: Site[];
     }
   ) {
+    if (!hasExtensionContext()) {
+      showToast("Forkline was updated. Reload this chat page, then try again.", 5000, "info");
+      return;
+    }
     try {
       const elements = adapter.getMessageElements();
       const messages: Message[] = elements.map((el, i) => adapter.readMessage(el, i));
 
       const currentConvId = adapter.getConversationId(new URL(window.location.href));
-      const targetSites = customOptions?.targetSites || [adapter.site];
+      const targetSites = customOptions?.targetSites || [adapter.site === "google" ? "chatgpt" : adapter.site];
 
       const forkPayload: ForkOptions = {
         sourceSite: adapter.site,
@@ -127,7 +146,7 @@ if (!adapter) {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
       const convId = adapter.getConversationId(new URL(window.location.href));
-      if (convId && activeNodeId) {
+      if (convId && activeNodeId && hasExtensionContext()) {
         chrome.runtime.sendMessage({
           type: "REPORT_CHAT_URL",
           nodeId: activeNodeId,
@@ -145,10 +164,12 @@ if (!adapter) {
   window.addEventListener("popstate", checkUrlChange);
 
   // Listen for background tab updates
-  chrome.runtime.onMessage.addListener((msg) => {
-    if (msg.type === "TAB_URL_UPDATED") {
-      checkUrlChange();
-    }
-  });
+  if (hasExtensionContext()) {
+    chrome.runtime.onMessage.addListener((msg) => {
+      if (msg.type === "TAB_URL_UPDATED") {
+        checkUrlChange();
+      }
+    });
+  }
 }
 

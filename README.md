@@ -121,10 +121,10 @@ Deploy to Google Cloud Run:
 gcloud run deploy forkline-proxy \
   --source proxy \
   --region us-central1 \
-  --set-secrets GEMINI_API_KEY=gemini-key:latest \
+  --set-secrets GEMINI_API_KEY=gemini-key:latest,PROXY_AUTH_TOKEN=forkline-proxy-token:latest \
   --allow-unauthenticated
 ```
-Then paste the deployed URL into Forkline's Side Panel **Settings**.
+Then paste the deployed HTTPS URL and its bearer token into Forkline's Side Panel **Settings**. Set `CORS_ORIGINS` only if a browser client (rather than the extension) needs to call the proxy.
 
 ---
 

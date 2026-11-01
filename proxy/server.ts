@@ -3,13 +3,21 @@ import cors from "cors";
 import { GoogleGenAI } from "@google/genai";
 
 const app = express();
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : false }));
 app.use(express.json({ limit: "2mb" }));
 
 const apiKey = process.env.GEMINI_API_KEY || "";
 const ai = new GoogleGenAI({ apiKey });
 const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const AUTH_TOKEN = process.env.PROXY_AUTH_TOKEN;
+
+if (process.env.NODE_ENV === "production" && !AUTH_TOKEN) {
+  throw new Error("PROXY_AUTH_TOKEN must be set when running the proxy in production.");
+}
 
 // Auth middleware if token is set
 app.use((req, res, next) => {
@@ -42,7 +50,7 @@ app.post("/v1/compact", async (req, res) => {
     res.json({ summary: response.text });
   } catch (err: any) {
     console.error("Gemini API error:", err);
-    res.status(500).json({ error: "Summarization failed", details: err?.message });
+    res.status(500).json({ error: "Summarization failed" });
   }
 });
 
@@ -62,7 +70,7 @@ app.post("/v1/title", async (req, res) => {
     res.json({ title });
   } catch (err: any) {
     console.error("Gemini API error:", err);
-    res.status(500).json({ error: "Title generation failed", details: err?.message });
+    res.status(500).json({ error: "Title generation failed" });
   }
 });
 

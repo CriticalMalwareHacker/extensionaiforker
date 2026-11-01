@@ -194,7 +194,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               <Cloud size={13} /> Cloud Run Proxy (Optional Fallback)
             </label>
             <input
-              type="text"
+              type="url"
               placeholder="https://forkline-proxy.run.app"
               value={settings.cloudProxyUrl || ""}
               onChange={(e) => setSettings({ ...settings, cloudProxyUrl: e.target.value })}
@@ -212,6 +212,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
                 outline: "none",
               }}
             />
+            <input
+              type="password"
+              placeholder="Proxy bearer token"
+              value={settings.cloudProxyToken || ""}
+              onChange={(e) => setSettings({ ...settings, cloudProxyToken: e.target.value })}
+              autoComplete="off"
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: "7px 10px",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
+                borderRadius: "6px",
+                color: "#f4f4f5",
+                fontSize: "12px",
+                fontFamily: "inherit",
+                outline: "none",
+              }}
+            />
+            <div style={{ fontSize: "11px", color: "#71717a", marginTop: "6px", lineHeight: 1.45 }}>
+              Use an HTTPS endpoint and its bearer token. Conversation text is sent only when this fallback is enabled.
+            </div>
           </div>
 
           {/* Reset button */}

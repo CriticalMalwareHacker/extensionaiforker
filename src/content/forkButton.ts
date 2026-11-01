@@ -16,11 +16,10 @@ export function injectForkButtons(
   const elements = adapter.getMessageElements();
 
   elements.forEach((el, index) => {
-    // Check if a fork button wrapper already exists inside or adjacent to this turn
-    if (
-      el.querySelector(".forkline-btn-wrapper") ||
-      el.parentElement?.querySelector(".forkline-btn-wrapper")
-    ) {
+    // Never inspect the parent: providers commonly use one large container for
+    // turns *and* the composer. That caused a button from one turn to suppress
+    // every other turn and occasionally be appended beside the input.
+    if (el.querySelector(".forkline-btn-wrapper")) {
       return;
     }
 
@@ -31,7 +30,7 @@ export function injectForkButtons(
       display: "inline-flex",
       alignItems: "center",
       gap: "0px",
-      margin: "4px 6px",
+      margin: "8px 4px",
       zIndex: "50",
       verticalAlign: "middle",
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -50,7 +49,7 @@ export function injectForkButtons(
       color: "#f4f4f5",
       backgroundColor: "#09090b",
       border: "1px solid #27272a",
-      borderRadius: "6px 0 0 6px",
+      borderRadius: "999px 0 0 999px",
       cursor: "pointer",
       transition: "all 0.15s ease",
       lineHeight: "1",
@@ -97,7 +96,7 @@ export function injectForkButtons(
       backgroundColor: "#09090b",
       border: "1px solid #27272a",
       borderLeft: "none",
-      borderRadius: "0 6px 6px 0",
+      borderRadius: "0 999px 999px 0",
       cursor: "pointer",
       transition: "all 0.15s ease",
     });
@@ -152,48 +151,20 @@ export function injectForkButtons(
     btnContainer.appendChild(forkBtn);
     btnContainer.appendChild(optionsBtn);
 
-    // 1. Look for existing action toolbar across ChatGPT, Claude, and Gemini
-    // In Gemini: message-actions custom element, or buttons with "Good response", "Modify response", "Share"
-    const geminiActions =
-      el.querySelector("message-actions, [role='toolbar'], response-action-bar, .model-response-actions") ||
-      el.parentElement?.querySelector("message-actions, [role='toolbar'], response-action-bar, .model-response-actions");
-
-    if (geminiActions) {
-      geminiActions.appendChild(btnContainer);
-      return;
-    }
-
-    // 2. Look for action buttons by aria-label (Gemini thumbs up/down, ChatGPT/Claude Copy)
-    const actionButton =
-      el.querySelector(
-        "button[aria-label*='Good response' i], button[aria-label*='Bad response' i], button[aria-label*='Modify' i], button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]"
-      ) ||
-      el.parentElement?.querySelector(
-        "button[aria-label*='Good response' i], button[aria-label*='Bad response' i], button[aria-label*='Modify' i], button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]"
-      );
-
-    const actionRow =
-      actionButton?.closest("message-actions, [role='toolbar'], div[class*='flex'], div[role='group']") ||
-      el.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]") ||
-      el.parentElement?.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]");
-
-    if (actionRow) {
-      actionRow.appendChild(btnContainer);
-    } else {
-      // 3. Fallback: create an inline row appended to the turn
-      const isUser = el.tagName.toLowerCase().includes("user") || el.getAttribute("data-message-author-role") === "user";
-      const inlineRow = document.createElement("div");
-      inlineRow.className = "forkline-inline-row";
-      Object.assign(inlineRow.style, {
-        display: "flex",
-        justifyContent: isUser ? "flex-end" : "flex-start",
-        marginTop: "6px",
-        marginBottom: "6px",
-        width: "100%",
-        clear: "both",
-      });
-      inlineRow.appendChild(btnContainer);
-      el.appendChild(inlineRow);
-    }
+    // Keep the control anchored to its own message. Page-level toolbars are
+    // unstable across providers and can include the prompt composer.
+    const isUser = el.tagName.toLowerCase().includes("user") || el.getAttribute("data-message-author-role") === "user";
+    const inlineRow = document.createElement("div");
+    inlineRow.className = "forkline-inline-row";
+    Object.assign(inlineRow.style, {
+      display: "flex",
+      justifyContent: isUser ? "flex-end" : "flex-start",
+      marginTop: "8px",
+      marginBottom: "4px",
+      width: "100%",
+      clear: "both",
+    });
+    inlineRow.appendChild(btnContainer);
+    el.appendChild(inlineRow);
   });
 }

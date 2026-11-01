@@ -28,6 +28,7 @@ interface BranchTreeProps {
   onMergeNode: (node: BranchNode) => void;
   onDeleteNode: (nodeId: string) => void;
   onLinkNodes?: (sourceId: string, targetId: string) => void;
+  onRenameNode?: (nodeId: string, newLabel: string) => void;
 }
 
 export const BranchTree: React.FC<BranchTreeProps> = ({
@@ -38,6 +39,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
   onMergeNode,
   onDeleteNode,
   onLinkNodes,
+  onRenameNode,
 }) => {
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return nodes;
@@ -116,6 +118,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
           onSelect: onSelectNode,
           onMerge: onMergeNode,
           onDelete: onDeleteNode,
+          onRename: onRenameNode,
         },
       };
     });
@@ -138,18 +141,16 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
     }
 
     return { initialNodes, initialEdges };
-  }, [filteredNodes, activeChatUrl, onSelectNode, onMergeNode, onDeleteNode]);
+  }, [filteredNodes, activeChatUrl, onSelectNode, onMergeNode, onDeleteNode, onRenameNode]);
 
   const [flowNodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [flowEdges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes and edges when data changes
   React.useEffect(() => {
     setNodes(initialNodes);
     setEdges(initialEdges);
   }, [initialNodes, initialEdges, setNodes, setEdges]);
 
-  // Handle user dragging a connection line between branches to link them!
   const handleConnect = useCallback(
     (params: Connection) => {
       if (params.source && params.target) {

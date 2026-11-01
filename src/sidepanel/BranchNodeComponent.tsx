@@ -1,7 +1,7 @@
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import { Handle, Position } from "reactflow";
 import { BranchNode, Site } from "../shared/types";
-import { GitMerge, ExternalLink, Trash2, Cpu } from "lucide-react";
+import { GitMerge, ExternalLink, Trash2, Cpu, Pencil, Check, X } from "lucide-react";
 
 interface NodeProps {
   data: {
@@ -10,12 +10,30 @@ interface NodeProps {
     onSelect: (node: BranchNode) => void;
     onMerge: (node: BranchNode) => void;
     onDelete: (nodeId: string) => void;
+    onRename?: (nodeId: string, newLabel: string) => void;
   };
 }
 
 export const BranchNodeComponent = memo(({ data }: NodeProps) => {
-  const { node, isCurrentTab, onSelect, onMerge, onDelete } = data;
+  const { node, isCurrentTab, onSelect, onMerge, onDelete, onRename } = data;
   const site = (node.chat?.site || node.tags?.[0] || "chatgpt") as Site;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingText, setEditingText] = useState(node.label);
+
+  const handleSaveRename = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    if (editingText.trim() && onRename) {
+      onRename(node.id, editingText.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelRename = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation();
+    setEditingText(node.label);
+    setIsEditing(false);
+  };
 
   return (
     <div
@@ -35,7 +53,6 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         cursor: "grab",
       }}
     >
-      {/* Target handle at top: connect incoming branch */}
       <Handle
         type="target"
         position={Position.Top}
@@ -111,25 +128,133 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         </div>
       </div>
 
-      {/* Branch Label */}
-      <div
-        style={{
-          fontSize: "13px",
-          fontWeight: "600",
-          color: "#fafafa",
-          lineHeight: "1.4",
-          marginBottom: "12px",
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-        title={node.label}
-      >
-        {node.label}
+      {/* Branch Title & Inline Rename */}
+      <div style={{ marginBottom: "12px" }}>
+        {isEditing ? (
+          <div
+            className="nodrag nopan"
+            style={{ display: "flex", alignItems: "center", gap: "4px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input
+              type="text"
+              value={editingText}
+              onChange={(e) => setEditingText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSaveRename(e);
+                if (e.key === "Escape") handleCancelRename(e);
+              }}
+              autoFocus
+              className="nodrag nopan"
+              style={{
+                flex: 1,
+                backgroundColor: "#000000",
+                border: "1px solid #ffffff",
+                borderRadius: "4px",
+                color: "#ffffff",
+                fontSize: "12px",
+                padding: "3px 6px",
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+            <button
+              className="nodrag nopan"
+              onClick={(e) => handleSaveRename(e)}
+              title="Save"
+              style={{
+                background: "#ffffff",
+                color: "#000000",
+                border: "none",
+                borderRadius: "4px",
+                padding: "4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Check size={11} />
+            </button>
+            <button
+              className="nodrag nopan"
+              onClick={handleCancelRename}
+              title="Cancel"
+              style={{
+                background: "transparent",
+                color: "#a1a1aa",
+                border: "1px solid #27272a",
+                borderRadius: "4px",
+                padding: "4px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <X size={11} />
+            </button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "space-between",
+              gap: "4px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "#fafafa",
+                lineHeight: "1.4",
+                flex: 1,
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+              }}
+              title="Double-click to rename"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+            >
+              {node.label}
+            </div>
+            <button
+              className="nodrag nopan"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(true);
+              }}
+              title="Rename branch"
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#71717a",
+                cursor: "pointer",
+                padding: "2px",
+                display: "flex",
+                alignItems: "center",
+                opacity: 0.7,
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = "1";
+                (e.currentTarget as HTMLElement).style.color = "#ffffff";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.opacity = "0.7";
+                (e.currentTarget as HTMLElement).style.color = "#71717a";
+              }}
+            >
+              <Pencil size={11} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Action Footer (nodrag so buttons can be clicked!) */}
+      {/* Action Footer */}
       <div
         className="nodrag nopan"
         style={{
@@ -231,7 +356,6 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         </div>
       </div>
 
-      {/* Source handle at bottom: drag to connect to another branch */}
       <Handle
         type="source"
         position={Position.Bottom}

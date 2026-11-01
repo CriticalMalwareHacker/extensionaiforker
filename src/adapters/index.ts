@@ -2,11 +2,13 @@ import { SiteAdapter } from "./types";
 import { ChatGPTAdapter } from "./chatgpt";
 import { ClaudeAdapter } from "./claude";
 import { GeminiAdapter } from "./gemini";
+import { GoogleSearchAdapter } from "./google";
 
 export const ADAPTERS: SiteAdapter[] = [
   new ChatGPTAdapter(),
   new ClaudeAdapter(),
   new GeminiAdapter(),
+  new GoogleSearchAdapter(),
 ];
 
 export function getAdapterForUrl(urlInput: URL | string): SiteAdapter | null {
@@ -27,4 +29,5 @@ export * from "./types";
 export * from "./chatgpt";
 export * from "./claude";
 export * from "./gemini";
+export * from "./google";
 

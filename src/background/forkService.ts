@@ -3,13 +3,52 @@ import { buildForkMessage } from "../core/primer";
 import { estimateTokens } from "../core/tokens";
 import { prepareCompaction, fallbackSummarize } from "../core/compact";
 import { getAdapterForUrl, ADAPTERS } from "../adapters";
-import { db, getSettings, saveNode } from "./db";
+import { db, findNodeByChat, getSettings, saveNode } from "./db";
 import { nanoAvailable, nameBranchNano, summarizeNano } from "../ai/nano";
 import { nameBranchRemote, summarizeRemote } from "../ai/remote";
 
-// Memory cache for payloads waiting to be injected into new tabs
-const pendingPayloads = new Map<number, ForkPayload>();
-const nodeToTab = new Map<string, number>();
+// MV3 workers can be suspended between opening a tab and the content script
+// starting. Keep the hand-off in session storage instead of worker memory.
+const pendingPayloadKey = (tabId: number) => `pendingFork:${tabId}`;
+const PENDING_PAYLOAD_TTL_MS = 5 * 60 * 1000;
+
+type StoredPayload = { payload: ForkPayload; createdAt: number };
+
+async function savePendingPayload(tabId: number, payload: ForkPayload): Promise<void> {
+  await chrome.storage.session.set({
+    [pendingPayloadKey(tabId)]: { payload, createdAt: Date.now() } satisfies StoredPayload,
+  });
+}
+
+async function getOrCreateParent(options: ForkOptions): Promise<BranchNode | null> {
+  if (options.parentNodeId) {
+    return (await db.nodes.get(options.parentNodeId)) || null;
+  }
+  if (!options.sourceChat) return null;
+
+  const existing = await findNodeByChat(
+    options.sourceChat.site,
+    options.sourceChat.conversationId
+  );
+  if (existing) return existing;
+
+  // A conversation can predate Forkline. Represent it once as a root so all
+  // subsequently-created forks have a stable, visible parent.
+  const root: BranchNode = {
+    id: crypto.randomUUID(),
+    parentId: null,
+    chat: options.sourceChat,
+    forkedAtIndex: null,
+    label: options.sourceChat.title || `${options.sourceChat.site} conversation`,
+    tags: [options.sourceChat.site, "source"],
+    tokenEstimate: 0,
+    compaction: "none",
+    excludedIndexes: [],
+    createdAt: Date.now(),
+  };
+  await saveNode(root);
+  return root;
+}
 
 export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds: string[] }> {
   const settings = await getSettings();
@@ -25,6 +64,12 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
     parentNodeId,
     sourceChat,
   } = options;
+
+  if (!targetSites.length || targetSites.some((site) => !ADAPTERS.some((adapter) => adapter.site === site))) {
+    throw new Error("Choose at least one supported target site.");
+  }
+
+  const parent = await getOrCreateParent(options);
 
   // Filter messages up to forkedAtIndex
   const messagesToFork = messages.filter((m) => m.index <= forkedAtIndex);
@@ -83,7 +128,8 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
 
     const node: BranchNode = {
       id: nodeId,
-      parentId: parentNodeId || null,
+      parentId: parent?.id || null,
+      groupId: parent?.groupId || options.groupId || null,
       chat: null,
       forkedAtIndex,
       label: targetSites.length > 1 ? `${instantLabel} (${targetSite})` : instantLabel,
@@ -108,11 +154,12 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
       contextText: fullText,
     };
 
-    // Open target tab immediately
-    const tab = await chrome.tabs.create({ url: targetUrl, active: true });
+    // Create a neutral tab first, persist its payload, then navigate. Creating
+    // directly at the provider URL races its document_idle content script.
+    const tab = await chrome.tabs.create({ url: "about:blank", active: createdTabIds.length === 0 });
     if (tab.id) {
-      pendingPayloads.set(tab.id, payload);
-      nodeToTab.set(nodeId, tab.id);
+      await savePendingPayload(tab.id, payload);
+      await chrome.tabs.update(tab.id, { url: targetUrl });
       createdTabIds.push(tab.id);
     }
   }
@@ -159,15 +206,18 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
   return { nodeIds: createdNodeIds };
 }
 
-export function getPendingPayload(tabId: number): ForkPayload | null {
-  const payload = pendingPayloads.get(tabId) || null;
-  if (payload) {
-    // Keep for 15s in case of tab navigation/redirect
-    setTimeout(() => {
-      pendingPayloads.delete(tabId);
-    }, 15000);
+export async function getPendingPayload(tabId: number): Promise<ForkPayload | null> {
+  const key = pendingPayloadKey(tabId);
+  const stored = (await chrome.storage.session.get(key))[key] as StoredPayload | undefined;
+  if (!stored || Date.now() - stored.createdAt > PENDING_PAYLOAD_TTL_MS) {
+    await chrome.storage.session.remove(key);
+    return null;
   }
-  return payload;
+  return stored.payload;
+}
+
+export async function acknowledgePendingPayload(tabId: number): Promise<void> {
+  await chrome.storage.session.remove(pendingPayloadKey(tabId));
 }
 
 export async function reportChatUrl(nodeId: string, url: string, title?: string): Promise<void> {

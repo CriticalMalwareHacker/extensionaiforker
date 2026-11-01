@@ -1,6 +1,7 @@
 import {
   handleForkRequest,
   getPendingPayload,
+  acknowledgePendingPayload,
   reportChatUrl,
 } from "./forkService";
 import {
@@ -25,6 +26,10 @@ if (chrome.sidePanel?.setPanelBehavior) {
 }
 
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) {
+    sendResponse({ error: "Unauthorized message sender" });
+    return false;
+  }
   const tabId = sender.tab?.id;
 
   (async () => {
@@ -39,11 +44,18 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
         case "GET_PENDING_PAYLOAD": {
           const targetTabId = message.tabId || tabId;
           if (targetTabId) {
-            const payload = getPendingPayload(targetTabId);
+            const payload = await getPendingPayload(targetTabId);
             sendResponse({ type: "PENDING_PAYLOAD_RESPONSE", payload });
           } else {
             sendResponse({ type: "PENDING_PAYLOAD_RESPONSE", payload: null });
           }
+          break;
+        }
+
+        case "ACK_PENDING_PAYLOAD": {
+          const targetTabId = message.tabId || tabId;
+          if (targetTabId) await acknowledgePendingPayload(targetTabId);
+          sendResponse({ success: true });
           break;
         }
 

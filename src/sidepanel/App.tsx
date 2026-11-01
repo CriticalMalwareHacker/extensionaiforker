@@ -4,6 +4,7 @@ import {
   getAllNodes,
   deleteNode,
   saveNode,
+  renameNode,
   getAllGroups,
   createGroup,
   deleteGroup,
@@ -26,7 +27,6 @@ import {
   Network,
   FolderPlus,
   X,
-  Plus,
 } from "lucide-react";
 
 export const App: React.FC = () => {
@@ -102,6 +102,12 @@ export const App: React.FC = () => {
       await deleteNode(nodeId);
       await loadData();
     }
+  };
+
+  const handleRenameNode = async (nodeId: string, newLabel: string) => {
+    if (!newLabel.trim()) return;
+    await renameNode(nodeId, newLabel.trim());
+    await loadData();
   };
 
   const handleLinkNodes = async (sourceId: string, targetId: string) => {
@@ -661,6 +667,7 @@ export const App: React.FC = () => {
             onMergeNode={handleStartMerge}
             onDeleteNode={handleDeleteNode}
             onAssignGroup={handleAssignGroup}
+            onRenameNode={handleRenameNode}
           />
         ) : (
           <BranchTree
@@ -671,6 +678,7 @@ export const App: React.FC = () => {
             onMergeNode={handleStartMerge}
             onDeleteNode={handleDeleteNode}
             onLinkNodes={handleLinkNodes}
+            onRenameNode={handleRenameNode}
           />
         )}
       </div>

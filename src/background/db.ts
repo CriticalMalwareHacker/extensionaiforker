@@ -67,6 +67,10 @@ export async function saveNode(node: BranchNode): Promise<void> {
   await db.nodes.put(node);
 }
 
+export async function renameNode(nodeId: string, newLabel: string): Promise<void> {
+  await db.nodes.update(nodeId, { label: newLabel.trim() });
+}
+
 export async function deleteNode(id: string): Promise<void> {
   await db.transaction("rw", db.nodes, async () => {
     const children = await db.nodes.where("parentId").equals(id).toArray();

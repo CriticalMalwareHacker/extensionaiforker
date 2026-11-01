@@ -1,7 +1,7 @@
-import { Message, Site } from "../shared/types";
+import { Message, SourceSite } from "../shared/types";
 
 export interface SiteAdapter {
-  site: Site;
+  site: SourceSite;
   matches(url: URL): boolean;
   getConversationId(url: URL): string | null;
   getMessageElements(): HTMLElement[];

@@ -1,4 +1,5 @@
 export type Site = "chatgpt" | "claude" | "gemini";
+export type SourceSite = Site | "google";
 
 export interface CodeBlock {
   lang?: string;
@@ -14,7 +15,7 @@ export interface Message {
 }
 
 export interface ChatRef {
-  site: Site;
+  site: SourceSite;
   conversationId: string;
   url: string;
   title?: string;
@@ -41,6 +42,8 @@ export interface BranchNode {
   summary?: string;
   isMerged?: boolean;
   mergedAt?: number;
+  /** A user-arranged position in the tree canvas. */
+  position?: { x: number; y: number };
 }
 
 export interface ForkPayload {
@@ -52,7 +55,7 @@ export interface ForkPayload {
 }
 
 export interface ForkOptions {
-  sourceSite: Site;
+  sourceSite: SourceSite;
   targetSites: Site[];
   messages: Message[];
   forkedAtIndex: number;
@@ -77,6 +80,7 @@ export interface ForklineSettings {
 export type ExtensionMessage =
   | { type: "FORK_REQUEST"; payload: ForkOptions }
   | { type: "GET_PENDING_PAYLOAD"; tabId?: number }
+  | { type: "ACK_PENDING_PAYLOAD"; tabId?: number }
   | { type: "PENDING_PAYLOAD_RESPONSE"; payload: ForkPayload | null }
   | { type: "REPORT_CHAT_URL"; nodeId: string; chat: ChatRef }
   | { type: "GET_ALL_NODES" }

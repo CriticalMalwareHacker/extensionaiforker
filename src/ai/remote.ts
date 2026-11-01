@@ -1,6 +1,16 @@
 import { ForklineSettings } from "../shared/types";
 import { getSettings } from "../background/db";
 
+function safeProxyUrl(baseUrl: string, path: string): string | null {
+  try {
+    const url = new URL(path, baseUrl);
+    // Tokens and conversation text must never be sent to an insecure endpoint.
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function summarizeRemote(
   text: string,
   mode: "compact" | "merge" = "compact",
@@ -12,7 +22,8 @@ export async function summarizeRemote(
   }
 
   try {
-    const url = new URL("/v1/compact", settings.cloudProxyUrl).toString();
+    const url = safeProxyUrl(settings.cloudProxyUrl, "/v1/compact");
+    if (!url) return null;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -49,7 +60,8 @@ export async function nameBranchRemote(
   }
 
   try {
-    const url = new URL("/v1/title", settings.cloudProxyUrl).toString();
+    const url = safeProxyUrl(settings.cloudProxyUrl, "/v1/title");
+    if (!url) return null;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };

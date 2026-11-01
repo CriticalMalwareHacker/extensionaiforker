@@ -13,7 +13,9 @@
     "https://chatgpt.com/*",
     "https://chat.openai.com/*",
     "https://claude.ai/*",
-    "https://gemini.google.com/*"
+    "https://gemini.google.com/*",
+    "https://www.google.com/*",
+    "https://www.google.co.in/*"
   ],
   "background": {
     "service_worker": "background.js",
@@ -41,7 +43,9 @@
         "https://chatgpt.com/*",
         "https://chat.openai.com/*",
         "https://claude.ai/*",
-        "https://gemini.google.com/*"
+        "https://gemini.google.com/*",
+        "https://www.google.com/search*",
+        "https://www.google.co.in/search*"
       ],
       "js": ["content.js"],
       "run_at": "document_idle"

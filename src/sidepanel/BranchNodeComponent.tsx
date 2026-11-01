@@ -39,13 +39,13 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
     <div
       style={{
         backgroundColor: "var(--fl-surface, #1d1d1d)",
-        border: isCurrentTab ? "2px solid #ffffff" : "1px solid var(--fl-border, #303030)",
+        border: isCurrentTab ? "2px solid var(--fl-active-bg)" : "1px solid var(--fl-border, #303030)",
         borderRadius: "18px",
         padding: "14px 16px",
         width: "250px",
         boxShadow: isCurrentTab
-          ? "0 0 0 2px #eeeeee, 0 16px 40px rgba(0, 0, 0, 0.8)"
-          : "0 8px 24px rgba(0, 0, 0, 0.5)",
+          ? "0 0 0 2px var(--fl-active-bg), 0 16px 40px var(--fl-shadow)"
+          : "0 8px 24px var(--fl-shadow)",
         color: "var(--fl-text, #f0f0f0)",
         fontFamily: "'Inter', sans-serif",
         position: "relative",
@@ -57,10 +57,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         type="target"
         position={Position.Top}
         style={{
-          background: "#ffffff",
+          background: "var(--fl-active-bg)",
           width: 9,
           height: 9,
-          border: "2px solid #151515",
+          border: "2px solid var(--fl-canvas)",
           top: -5,
         }}
       />
@@ -270,8 +270,8 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
             display: "inline-flex",
             alignItems: "center",
             gap: "5px",
-            background: "#ffffff",
-            color: "#000000",
+            background: "var(--fl-active-bg)",
+            color: "var(--fl-active-text)",
             border: "none",
             borderRadius: "999px",
             padding: "5px 12px",
@@ -334,10 +334,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         type="source"
         position={Position.Bottom}
         style={{
-          background: "#ffffff",
+          background: "var(--fl-active-bg)",
           width: 9,
           height: 9,
-          border: "2px solid #151515",
+          border: "2px solid var(--fl-canvas)",
           bottom: -5,
         }}
       />

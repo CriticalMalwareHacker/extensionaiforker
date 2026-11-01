@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { BranchNode, BranchGroup } from "../shared/types";
 import {
   getAllNodes,
@@ -19,7 +19,6 @@ import {
   GitBranch,
   Search,
   Settings,
-  Download,
   RefreshCw,
   FileJson,
   FileText,
@@ -34,7 +33,7 @@ import {
   BookOpen,
   Trash2,
   X,
-  CreditCard,
+  ExternalLink,
 } from "lucide-react";
 
 export const App: React.FC = () => {
@@ -48,12 +47,50 @@ export const App: React.FC = () => {
   const [selectedMergeNode, setSelectedMergeNode] = useState<BranchNode | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [activeMenuItem, setActiveMenuItem] = useState<string>("profile");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    try {
+      const saved = localStorage.getItem("forkline_theme");
+      if (saved === "light" || saved === "dark") return saved;
+    } catch {
+      // fallback
+    }
+    return "dark";
+  });
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    try {
+      localStorage.setItem("forkline_theme", next);
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.body.style.backgroundColor = theme === "dark" ? "#151515" : "#f5f5f7";
+  }, [theme]);
+
+  // Global shortcut (Ctrl+K / Cmd+K) to toggle search popup
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+      }
+      if (e.key === "Escape" && isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isSearchOpen]);
 
   const loadData = useCallback(async () => {
     try {
@@ -227,29 +264,36 @@ export const App: React.FC = () => {
     ? nodes.find((n) => n.id === selectedMergeNode.parentId) || null
     : null;
 
+  // Filtered nodes for the search popup preview
+  const searchPopupResults = nodes.filter((n) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      n.label.toLowerCase().includes(q) ||
+      n.tags.some((t) => t.toLowerCase().includes(q)) ||
+      (n.chat?.site || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
-    <div className="forkline-app">
+    <div className="forkline-app" data-theme={theme}>
       {/* Top Bento Header Bar */}
       <div className="forkline-topbar">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div>
-              <div>
-                <GitBranch size={16} />
-              </div>
+            <div className="forkline-brand-icon">
+              <GitBranch size={16} />
             </div>
             <div>
-              <span style={{ fontSize: "15px", fontWeight: "700", letterSpacing: "-0.3px" }}>
-                Forkline
-              </span>
+              <span className="forkline-brand-title">Forkline</span>
               <span
                 style={{
                   marginLeft: "6px",
                   fontSize: "9px",
                   fontFamily: "monospace",
                   color: "var(--fl-muted)",
-                  backgroundColor: "var(--fl-surface)",
+                  backgroundColor: "var(--fl-surface-raised)",
                   border: "1px solid var(--fl-border)",
                   padding: "1px 6px",
                   borderRadius: "999px",
@@ -282,11 +326,21 @@ export const App: React.FC = () => {
               </button>
             </div>
 
+            {/* Quick Search Popup Trigger */}
+            <button
+              onClick={() => setIsSearchOpen(true)}
+              title="Search (Ctrl+K)"
+              className="dock-btn"
+              style={{ width: "30px", height: "30px" }}
+            >
+              <Search size={13} />
+            </button>
+
             <button
               onClick={loadData}
               title="Refresh branches"
               className="dock-btn"
-              style={{ width: "32px", height: "32px" }}
+              style={{ width: "30px", height: "30px" }}
             >
               <RefreshCw size={13} />
             </button>
@@ -294,74 +348,55 @@ export const App: React.FC = () => {
         </div>
 
         {/* Bento Metrics Bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span style={{ fontSize: "11px", color: "var(--fl-muted)" }}>Total Branches</span>
-            <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--fl-text)" }}>
-              {nodes.length}
-            </span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <div className="metric-card">
+            <span className="metric-label">Branches</span>
+            <span className="metric-val">{nodes.length}</span>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <span style={{ fontSize: "11px", color: "var(--fl-muted)" }}>Est. Tokens</span>
-            <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--fl-text)" }}>
+          <div className="metric-card">
+            <span className="metric-label">Tokens</span>
+            <span className="metric-val">
               ~{totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : totalTokens}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Bento Search, Groups & Platform Filters */}
+      {/* Filter Row */}
       <div className="forkline-filters">
-        <div>
-          <Search size={14} color="var(--fl-muted)" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search branches..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
+        {/* Active Search Filter Chip (if search query applied) */}
+        {searchQuery && (
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div className="active-search-chip">
+              <Search size={11} color="var(--fl-muted)" />
+              <span>Search: "{searchQuery}"</span>
+              <button onClick={() => setSearchQuery("")} title="Clear search">
+                &times;
+              </button>
+            </div>
             <button
-              onClick={() => setSearchQuery("")}
-              style={{ background: "none", border: "none", color: "var(--fl-muted)", cursor: "pointer", fontSize: "13px" }}
+              onClick={() => setIsSearchOpen(true)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--fl-muted)",
+                fontSize: "11px",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
             >
-              &times;
+              Edit
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Groups Filter Row */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px", overflowX: "auto", paddingBottom: "2px" }}>
           <button
             onClick={() => setIsCreateGroupOpen(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              background: "var(--fl-surface)",
-              color: "var(--fl-text)",
-              border: "1px solid var(--fl-border)",
-              borderRadius: "999px",
-              padding: "4px 10px",
-              fontSize: "11px",
-              fontWeight: "600",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            className="filter-pill-btn"
+            style={{ fontWeight: "700" }}
           >
             <FolderPlus size={11} />
             <span>+ Group</span>
@@ -369,34 +404,14 @@ export const App: React.FC = () => {
 
           <button
             onClick={() => setSelectedGroupId("all")}
-            style={{
-              background: selectedGroupId === "all" ? "#ffffff" : "var(--fl-surface)",
-              color: selectedGroupId === "all" ? "#000000" : "var(--fl-muted)",
-              border: "1px solid var(--fl-border)",
-              borderRadius: "999px",
-              padding: "4px 10px",
-              fontSize: "11px",
-              fontWeight: "600",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            className={`filter-pill-btn ${selectedGroupId === "all" ? "active" : ""}`}
           >
             All
           </button>
 
           <button
             onClick={() => setSelectedGroupId("ungrouped")}
-            style={{
-              background: selectedGroupId === "ungrouped" ? "#ffffff" : "var(--fl-surface)",
-              color: selectedGroupId === "ungrouped" ? "#000000" : "var(--fl-muted)",
-              border: "1px solid var(--fl-border)",
-              borderRadius: "999px",
-              padding: "4px 10px",
-              fontSize: "11px",
-              fontWeight: "600",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
+            className={`filter-pill-btn ${selectedGroupId === "ungrouped" ? "active" : ""}`}
           >
             Ungrouped
           </button>
@@ -404,32 +419,14 @@ export const App: React.FC = () => {
           {groups.map((g) => (
             <div
               key={g.id}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                background: selectedGroupId === g.id ? "#ffffff" : "var(--fl-surface)",
-                color: selectedGroupId === g.id ? "#000000" : "var(--fl-muted)",
-                border: "1px solid var(--fl-border)",
-                borderRadius: "999px",
-                padding: "3px 10px",
-                fontSize: "11px",
-                fontWeight: "600",
-                whiteSpace: "nowrap",
-                cursor: "pointer",
-              }}
+              className={`group-chip-pill ${selectedGroupId === g.id ? "active" : ""}`}
               onClick={() => setSelectedGroupId(g.id)}
             >
               <span>{g.name}</span>
               <button
+                className="group-chip-remove-btn"
                 onClick={(e) => handleDeleteGroup(g.id, e)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: selectedGroupId === g.id ? "#000000" : "var(--fl-muted)",
-                  cursor: "pointer",
-                  padding: "0 0 0 4px",
-                  fontSize: "11px",
-                }}
+                title="Delete group"
               >
                 &times;
               </button>
@@ -443,18 +440,8 @@ export const App: React.FC = () => {
             <button
               key={p}
               onClick={() => setSelectedPlatform(p)}
-              style={{
-                background: selectedPlatform === p ? "#ffffff" : "var(--fl-surface)",
-                color: selectedPlatform === p ? "#000000" : "var(--fl-muted)",
-                border: "1px solid var(--fl-border)",
-                borderRadius: "999px",
-                padding: "4px 10px",
-                fontSize: "10px",
-                fontWeight: "600",
-                textTransform: "uppercase",
-                fontFamily: "monospace",
-                cursor: "pointer",
-              }}
+              className={`filter-pill-btn ${selectedPlatform === p ? "active" : ""}`}
+              style={{ textTransform: "uppercase", fontFamily: "monospace", fontSize: "10px" }}
             >
               {p}
             </button>
@@ -503,9 +490,9 @@ export const App: React.FC = () => {
             </button>
 
             <button
-              className="dock-btn"
-              title="Focus Search"
-              onClick={() => searchInputRef.current?.focus()}
+              className={`dock-btn ${isSearchOpen ? "active" : ""}`}
+              title="Search Branches (Ctrl+K)"
+              onClick={() => setIsSearchOpen(true)}
             >
               <Search size={14} />
             </button>
@@ -526,10 +513,11 @@ export const App: React.FC = () => {
               <User size={15} />
             </button>
 
+            {/* Live Theme Toggle */}
             <button
               className="dock-btn"
-              title="Theme Toggle"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              onClick={toggleTheme}
             >
               {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
             </button>
@@ -617,6 +605,85 @@ export const App: React.FC = () => {
         </div>
       </div>
 
+      {/* Command Search Popup Modal */}
+      {isSearchOpen && (
+        <div className="search-popup-backdrop" onClick={() => setIsSearchOpen(false)}>
+          <div className="search-popup-card" onClick={(e) => e.stopPropagation()}>
+            <div className="search-popup-input-row">
+              <Search size={16} color="var(--fl-muted)" />
+              <input
+                type="text"
+                placeholder="Search branches by title, tag, platform..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="search-popup-input"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "var(--fl-muted)",
+                    fontSize: "14px",
+                    cursor: "pointer",
+                    padding: "2px",
+                  }}
+                >
+                  &times;
+                </button>
+              )}
+              <span
+                className="search-popup-kbd"
+                onClick={() => setIsSearchOpen(false)}
+                title="Press Esc to close"
+              >
+                Esc
+              </span>
+            </div>
+
+            {/* Quick Results Preview */}
+            <div className="search-popup-results">
+              {searchPopupResults.length === 0 ? (
+                <div className="search-popup-empty">
+                  No branches match "{searchQuery}"
+                </div>
+              ) : (
+                searchPopupResults.slice(0, 7).map((node) => (
+                  <div
+                    key={node.id}
+                    className="search-popup-item"
+                    onClick={() => {
+                      handleSelectNode(node);
+                      setIsSearchOpen(false);
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1, minWidth: 0 }}>
+                      <span className="search-popup-site-badge">
+                        {node.chat?.site || node.tags?.[0] || "chat"}
+                      </span>
+                      <span className="search-popup-item-label">
+                        {node.label}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "11px", color: "var(--fl-muted)", flexShrink: 0 }}>
+                      <span>~{node.tokenEstimate} tkn</span>
+                      <ExternalLink size={12} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="search-popup-footer">
+              <span>Click a branch to jump directly to chat</span>
+              <span>{searchPopupResults.length} found</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Group Modal */}
       {isCreateGroupOpen && (
         <div
@@ -626,7 +693,7 @@ export const App: React.FC = () => {
             left: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.72)",
+            backgroundColor: "var(--fl-modal-backdrop)",
             backdropFilter: "blur(12px)",
             display: "flex",
             alignItems: "center",
@@ -646,7 +713,7 @@ export const App: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               gap: "14px",
-              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.65)",
+              boxShadow: "0 24px 60px var(--fl-shadow)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -697,8 +764,8 @@ export const App: React.FC = () => {
               <button
                 onClick={handleCreateGroup}
                 style={{
-                  background: "#ffffff",
-                  color: "#000000",
+                  background: "var(--fl-active-bg)",
+                  color: "var(--fl-active-text)",
                   border: "none",
                   borderRadius: "999px",
                   padding: "7px 16px",

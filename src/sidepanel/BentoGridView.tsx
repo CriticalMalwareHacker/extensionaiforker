@@ -273,8 +273,8 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     style={{
                       fontSize: "10px",
                       fontWeight: "700",
-                      color: "#000000",
-                      backgroundColor: "#ffffff",
+                      color: "var(--fl-active-text)",
+                      backgroundColor: "var(--fl-active-bg)",
                       padding: "2px 8px",
                       borderRadius: "999px",
                     }}
@@ -286,7 +286,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
 
               <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "var(--fl-muted)" }}>
                 {node.isMerged && (
-                  <span title="Merged into parent" style={{ color: "#ffffff", display: "flex" }}>
+                  <span title="Merged into parent" style={{ color: "var(--fl-text)", display: "flex" }}>
                     <GitMerge size={12} />
                   </span>
                 )}
@@ -332,8 +332,8 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     onClick={(e) => handleSaveRename(node.id, e)}
                     title="Save title"
                     style={{
-                      background: "#ffffff",
-                      color: "#000000",
+                      background: "var(--fl-active-bg)",
+                      color: "var(--fl-active-text)",
                       border: "none",
                       borderRadius: "999px",
                       padding: "6px 10px",
@@ -428,8 +428,8 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
-                  background: "#ffffff",
-                  color: "#000000",
+                  background: "var(--fl-active-bg)",
+                  color: "var(--fl-active-text)",
                   border: "none",
                   borderRadius: "999px",
                   padding: "6px 14px",

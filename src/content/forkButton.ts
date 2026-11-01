@@ -31,7 +31,7 @@ export function injectForkButtons(
       display: "inline-flex",
       alignItems: "center",
       gap: "0px",
-      margin: "2px 6px",
+      margin: "4px 6px",
       zIndex: "50",
       verticalAlign: "middle",
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -152,27 +152,45 @@ export function injectForkButtons(
     btnContainer.appendChild(forkBtn);
     btnContainer.appendChild(optionsBtn);
 
-    // Look for existing action toolbar (Copy, Thumbs down, Share, etc.)
-    const copyOrActionBtn =
-      el.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]") ||
-      el.parentElement?.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]");
+    // 1. Look for existing action toolbar across ChatGPT, Claude, and Gemini
+    // In Gemini: message-actions custom element, or buttons with "Good response", "Modify response", "Share"
+    const geminiActions =
+      el.querySelector("message-actions, [role='toolbar'], response-action-bar, .model-response-actions") ||
+      el.parentElement?.querySelector("message-actions, [role='toolbar'], response-action-bar, .model-response-actions");
+
+    if (geminiActions) {
+      geminiActions.appendChild(btnContainer);
+      return;
+    }
+
+    // 2. Look for action buttons by aria-label (Gemini thumbs up/down, ChatGPT/Claude Copy)
+    const actionButton =
+      el.querySelector(
+        "button[aria-label*='Good response' i], button[aria-label*='Bad response' i], button[aria-label*='Modify' i], button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]"
+      ) ||
+      el.parentElement?.querySelector(
+        "button[aria-label*='Good response' i], button[aria-label*='Bad response' i], button[aria-label*='Modify' i], button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]"
+      );
 
     const actionRow =
-      copyOrActionBtn?.closest("div[class*='flex'], div[role='group']") ||
+      actionButton?.closest("message-actions, [role='toolbar'], div[class*='flex'], div[role='group']") ||
       el.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]") ||
       el.parentElement?.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]");
 
     if (actionRow) {
       actionRow.appendChild(btnContainer);
     } else {
-      // For user messages or when action row isn't mounted yet
+      // 3. Fallback: create an inline row appended to the turn
+      const isUser = el.tagName.toLowerCase().includes("user") || el.getAttribute("data-message-author-role") === "user";
       const inlineRow = document.createElement("div");
       inlineRow.className = "forkline-inline-row";
       Object.assign(inlineRow.style, {
         display: "flex",
-        justifyContent: "flex-end",
-        marginTop: "4px",
-        marginBottom: "4px",
+        justifyContent: isUser ? "flex-end" : "flex-start",
+        marginTop: "6px",
+        marginBottom: "6px",
+        width: "100%",
+        clear: "both",
       });
       inlineRow.appendChild(btnContainer);
       el.appendChild(inlineRow);

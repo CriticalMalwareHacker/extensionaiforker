@@ -2,12 +2,15 @@ import { SiteAdapter } from "./types";
 import { Message, Site } from "../shared/types";
 
 const SELECTORS = {
-  messageTurn: "user-query, model-response, [data-test-id=\"message-container\"]",
-  userTurn: "user-query",
-  modelTurn: "model-response",
+  messageTurn:
+    "user-query, model-response, response-container, [data-test-id=\"message-container\"], div[class*=\"response-container\"], div[class*=\"model-response\"], message-content",
+  userTurn: "user-query, div[class*=\"user-query\"]",
+  modelTurn:
+    "model-response, response-container, div[class*=\"model-response\"], div[class*=\"response-container\"], message-content",
   codeBlock: "pre, code-block, .code-container",
   attachments: "img[src*=\"blob\"], img[src*=\"data:image\"], file-chip, .attachment-item",
-  inputBox: "div.ql-editor[contenteditable=\"true\"], rich-textarea div[contenteditable=\"true\"], textarea",
+  inputBox:
+    "div.ql-editor[contenteditable=\"true\"], rich-textarea div[contenteditable=\"true\"], div[contenteditable=\"true\"][role=\"textbox\"], textarea",
   chatContainer: "chat-window, .chat-history, main",
   title: "title, .conversation-title",
 };
@@ -25,13 +28,36 @@ export class GeminiAdapter implements SiteAdapter {
   }
 
   getMessageElements(): HTMLElement[] {
-    const list = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageTurn));
-    return list;
+    // 1. Direct query of top-level turns (user query and model response)
+    const elements = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "user-query, model-response, response-container, [data-test-id=\"message-container\"], div[class*=\"response-container\"], div[class*=\"model-response\"]"
+      )
+    );
+
+    if (elements.length > 0) {
+      // Filter out nested duplicates (e.g. if response-container is inside model-response)
+      const topTurns: HTMLElement[] = [];
+      for (const el of elements) {
+        const hasParentTurn = elements.some((other) => other !== el && other.contains(el));
+        if (!hasParentTurn) {
+          topTurns.push(el);
+        }
+      }
+      return topTurns.length > 0 ? topTurns : elements;
+    }
+
+    return Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageTurn));
   }
 
   readMessage(el: HTMLElement, index: number): Message {
     const tagName = el.tagName.toLowerCase();
-    const isUser = tagName === "user-query" || Boolean(el.closest(SELECTORS.userTurn));
+    const isUser =
+      tagName === "user-query" ||
+      Boolean(el.closest(SELECTORS.userTurn)) ||
+      Boolean(el.querySelector(SELECTORS.userTurn)) ||
+      Boolean(el.classList?.contains("user-query"));
+
     const role: "user" | "assistant" = isUser ? "user" : "assistant";
 
     // Extract code blocks
@@ -54,7 +80,11 @@ export class GeminiAdapter implements SiteAdapter {
     });
 
     const hasAttachments = el.querySelectorAll(SELECTORS.attachments).length > 0;
-    const text = el.innerText || el.textContent || "";
+
+    // Clean text by cloning and stripping out action bars & injected buttons
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".forkline-btn-wrapper, .forkline-action-btn, message-actions").forEach((b) => b.remove());
+    const text = clone.innerText || clone.textContent || "";
 
     return {
       index,
@@ -73,7 +103,7 @@ export class GeminiAdapter implements SiteAdapter {
     try {
       input.focus();
 
-      // Quill editor (Gemini uses Quill or similar contenteditable)
+      // Quill editor (Gemini uses Quill or custom contenteditable)
       if (document.execCommand("insertText", false, text)) {
         return true;
       }
@@ -90,7 +120,6 @@ export class GeminiAdapter implements SiteAdapter {
       }
 
       if (input.isContentEditable) {
-        // Fallback for Quill: append a p tag or set innerText
         input.innerText = text;
         input.dispatchEvent(new Event("input", { bubbles: true }));
         return true;

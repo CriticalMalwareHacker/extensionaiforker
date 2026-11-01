@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { BranchNode, BranchGroup } from "../shared/types";
 import {
   getAllNodes,
@@ -26,7 +26,15 @@ import {
   LayoutGrid,
   Network,
   FolderPlus,
+  Plus,
+  User,
+  Sun,
+  Moon,
+  Sparkles,
+  BookOpen,
+  Trash2,
   X,
+  CreditCard,
 } from "lucide-react";
 
 export const App: React.FC = () => {
@@ -41,7 +49,11 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [activeMenuItem, setActiveMenuItem] = useState<string>("profile");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -174,7 +186,7 @@ export const App: React.FC = () => {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setExportMenuOpen(false);
+    setIsAccountMenuOpen(false);
   };
 
   const handleExportMarkdown = () => {
@@ -198,7 +210,15 @@ export const App: React.FC = () => {
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    setExportMenuOpen(false);
+    setIsAccountMenuOpen(false);
+  };
+
+  const handleClearAll = async () => {
+    if (confirm("Reset all branches and restore defaults?")) {
+      await db.nodes.clear();
+      setIsAccountMenuOpen(false);
+      await loadData();
+    }
   };
 
   const totalTokens = nodes.reduce((acc, curr) => acc + (curr.tokenEstimate || 0), 0);
@@ -208,48 +228,19 @@ export const App: React.FC = () => {
     : null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        backgroundColor: "#000000",
-        color: "#fafafa",
-        fontFamily: "'Inter', sans-serif",
-        overflow: "hidden",
-      }}
-    >
+    <div className="forkline-app">
       {/* Top Bento Header Bar */}
-      <div
-        style={{
-          padding: "12px 14px",
-          borderBottom: "1px solid #18181b",
-          backgroundColor: "#000000",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px",
-        }}
-      >
+      <div className="forkline-topbar">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <div
-              style={{
-                width: "26px",
-                height: "26px",
-                borderRadius: "6px",
-                backgroundColor: "#09090b",
-                border: "1px solid #27272a",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fafafa",
-              }}
-            >
-              <GitBranch size={14} />
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div>
+              <div>
+                <GitBranch size={16} />
+              </div>
             </div>
             <div>
-              <span style={{ fontSize: "14px", fontWeight: "700", letterSpacing: "-0.2px" }}>
+              <span style={{ fontSize: "15px", fontWeight: "700", letterSpacing: "-0.3px" }}>
                 Forkline
               </span>
               <span
@@ -257,11 +248,11 @@ export const App: React.FC = () => {
                   marginLeft: "6px",
                   fontSize: "9px",
                   fontFamily: "monospace",
-                  color: "#71717a",
-                  backgroundColor: "#18181b",
-                  border: "1px solid #27272a",
-                  padding: "1px 5px",
-                  borderRadius: "3px",
+                  color: "var(--fl-muted)",
+                  backgroundColor: "var(--fl-surface)",
+                  border: "1px solid var(--fl-border)",
+                  padding: "1px 6px",
+                  borderRadius: "999px",
                 }}
               >
                 v0.1
@@ -269,218 +260,63 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Action icons & View Switcher */}
-          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <div
-              style={{
-                display: "flex",
-                backgroundColor: "#09090b",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                padding: "2px",
-                marginRight: "4px",
-              }}
-            >
+          {/* Segmented Pill Switcher (Image 4 reference) */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div className="segmented-pill-container">
+              <span className="segmented-pill-label">View</span>
               <button
+                className={`segmented-pill-btn ${viewMode === "bento" ? "active" : ""}`}
                 onClick={() => setViewMode("bento")}
-                title="Bento Grid View"
-                style={{
-                  background: viewMode === "bento" ? "#ffffff" : "transparent",
-                  color: viewMode === "bento" ? "#000000" : "#a1a1aa",
-                  border: "none",
-                  borderRadius: "4px",
-                  padding: "4px 7px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "11px",
-                  fontWeight: "600",
-                  gap: "4px",
-                  transition: "all 0.15s ease",
-                }}
+                title="Bento Grid"
               >
-                <LayoutGrid size={12} />
-                <span>Grid</span>
+                <LayoutGrid size={11} />
+                <span>Grid &lt;&gt;</span>
               </button>
               <button
+                className={`segmented-pill-btn ${viewMode === "tree" ? "active" : ""}`}
                 onClick={() => setViewMode("tree")}
                 title="Visual Tree Graph"
-                style={{
-                  background: viewMode === "tree" ? "#ffffff" : "transparent",
-                  color: viewMode === "tree" ? "#000000" : "#a1a1aa",
-                  border: "none",
-                  borderRadius: "4px",
-                  padding: "4px 7px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  fontSize: "11px",
-                  fontWeight: "600",
-                  gap: "4px",
-                  transition: "all 0.15s ease",
-                }}
               >
-                <Network size={12} />
-                <span>Tree</span>
+                <Network size={11} />
+                <span>Tree &lt;&gt;</span>
               </button>
             </div>
 
             <button
               onClick={loadData}
-              title="Refresh"
-              style={{
-                background: "transparent",
-                border: "1px solid #27272a",
-                color: "#a1a1aa",
-                borderRadius: "6px",
-                padding: "5px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
+              title="Refresh branches"
+              className="dock-btn"
+              style={{ width: "32px", height: "32px" }}
             >
               <RefreshCw size={13} />
-            </button>
-
-            {/* Export Menu */}
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={() => setExportMenuOpen(!exportMenuOpen)}
-                title="Export"
-                style={{
-                  background: "transparent",
-                  border: "1px solid #27272a",
-                  color: "#a1a1aa",
-                  borderRadius: "6px",
-                  padding: "5px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
-              >
-                <Download size={13} />
-              </button>
-
-              {exportMenuOpen && (
-                <div
-                  style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "100%",
-                    marginTop: "6px",
-                    backgroundColor: "#09090b",
-                    border: "1px solid #27272a",
-                    borderRadius: "6px",
-                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.8)",
-                    zIndex: 200,
-                    minWidth: "150px",
-                    padding: "4px",
-                  }}
-                >
-                  <button
-                    onClick={handleExportMarkdown}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "7px 10px",
-                      background: "none",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: "#f4f4f5",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
-                  >
-                    <FileText size={13} /> Export Markdown
-                  </button>
-                  <button
-                    onClick={handleExportJSON}
-                    style={{
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "7px 10px",
-                      background: "none",
-                      border: "none",
-                      borderRadius: "4px",
-                      color: "#f4f4f5",
-                      fontSize: "12px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
-                  >
-                    <FileJson size={13} /> Export JSON
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              title="Settings"
-              style={{
-                background: "transparent",
-                border: "1px solid #27272a",
-                color: "#a1a1aa",
-                borderRadius: "6px",
-                padding: "5px",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
-            >
-              <Settings size={13} />
             </button>
           </div>
         </div>
 
         {/* Bento Metrics Bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
           <div
             style={{
-              backgroundColor: "#09090b",
-              border: "1px solid #27272a",
-              borderRadius: "8px",
-              padding: "8px 12px",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
             }}
           >
-            <span style={{ fontSize: "11px", color: "#71717a" }}>Total Branches</span>
-            <span style={{ fontSize: "13px", fontWeight: "700", color: "#fafafa" }}>{nodes.length}</span>
+            <span style={{ fontSize: "11px", color: "var(--fl-muted)" }}>Total Branches</span>
+            <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--fl-text)" }}>
+              {nodes.length}
+            </span>
           </div>
 
           <div
             style={{
-              backgroundColor: "#09090b",
-              border: "1px solid #27272a",
-              borderRadius: "8px",
-              padding: "8px 12px",
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
             }}
           >
-            <span style={{ fontSize: "11px", color: "#71717a" }}>Est. Tokens</span>
-            <span style={{ fontSize: "13px", fontWeight: "700", color: "#fafafa" }}>
+            <span style={{ fontSize: "11px", color: "var(--fl-muted)" }}>Est. Tokens</span>
+            <span style={{ fontSize: "13px", fontWeight: "700", color: "var(--fl-text)" }}>
               ~{totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : totalTokens}
             </span>
           </div>
@@ -488,47 +324,20 @@ export const App: React.FC = () => {
       </div>
 
       {/* Bento Search, Groups & Platform Filters */}
-      <div
-        style={{
-          padding: "8px 12px",
-          backgroundColor: "#000000",
-          borderBottom: "1px solid #18181b",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            backgroundColor: "#09090b",
-            border: "1px solid #27272a",
-            borderRadius: "6px",
-            padding: "5px 10px",
-          }}
-        >
-          <Search size={13} color="#71717a" />
+      <div className="forkline-filters">
+        <div>
+          <Search size={14} color="var(--fl-muted)" />
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search branches..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              background: "transparent",
-              border: "none",
-              outline: "none",
-              color: "#fafafa",
-              fontSize: "12px",
-              fontFamily: "inherit",
-            }}
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              style={{ background: "none", border: "none", color: "#71717a", fontSize: "12px", cursor: "pointer" }}
+              style={{ background: "none", border: "none", color: "var(--fl-muted)", cursor: "pointer", fontSize: "13px" }}
             >
               &times;
             </button>
@@ -542,13 +351,13 @@ export const App: React.FC = () => {
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "3px",
-              background: "#18181b",
-              color: "#fafafa",
-              border: "1px solid #27272a",
-              borderRadius: "4px",
-              padding: "3px 7px",
-              fontSize: "10px",
+              gap: "4px",
+              background: "var(--fl-surface)",
+              color: "var(--fl-text)",
+              border: "1px solid var(--fl-border)",
+              borderRadius: "999px",
+              padding: "4px 10px",
+              fontSize: "11px",
               fontWeight: "600",
               cursor: "pointer",
               whiteSpace: "nowrap",
@@ -561,12 +370,12 @@ export const App: React.FC = () => {
           <button
             onClick={() => setSelectedGroupId("all")}
             style={{
-              background: selectedGroupId === "all" ? "#ffffff" : "#09090b",
-              color: selectedGroupId === "all" ? "#000000" : "#a1a1aa",
-              border: "1px solid #27272a",
-              borderRadius: "4px",
-              padding: "3px 8px",
-              fontSize: "10px",
+              background: selectedGroupId === "all" ? "#ffffff" : "var(--fl-surface)",
+              color: selectedGroupId === "all" ? "#000000" : "var(--fl-muted)",
+              border: "1px solid var(--fl-border)",
+              borderRadius: "999px",
+              padding: "4px 10px",
+              fontSize: "11px",
               fontWeight: "600",
               cursor: "pointer",
               whiteSpace: "nowrap",
@@ -578,12 +387,12 @@ export const App: React.FC = () => {
           <button
             onClick={() => setSelectedGroupId("ungrouped")}
             style={{
-              background: selectedGroupId === "ungrouped" ? "#ffffff" : "#09090b",
-              color: selectedGroupId === "ungrouped" ? "#000000" : "#a1a1aa",
-              border: "1px solid #27272a",
-              borderRadius: "4px",
-              padding: "3px 8px",
-              fontSize: "10px",
+              background: selectedGroupId === "ungrouped" ? "#ffffff" : "var(--fl-surface)",
+              color: selectedGroupId === "ungrouped" ? "#000000" : "var(--fl-muted)",
+              border: "1px solid var(--fl-border)",
+              borderRadius: "999px",
+              padding: "4px 10px",
+              fontSize: "11px",
               fontWeight: "600",
               cursor: "pointer",
               whiteSpace: "nowrap",
@@ -598,12 +407,12 @@ export const App: React.FC = () => {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                background: selectedGroupId === g.id ? "#ffffff" : "#09090b",
-                color: selectedGroupId === g.id ? "#000000" : "#a1a1aa",
-                border: "1px solid #27272a",
-                borderRadius: "4px",
-                padding: "2px 6px",
-                fontSize: "10px",
+                background: selectedGroupId === g.id ? "#ffffff" : "var(--fl-surface)",
+                color: selectedGroupId === g.id ? "#000000" : "var(--fl-muted)",
+                border: "1px solid var(--fl-border)",
+                borderRadius: "999px",
+                padding: "3px 10px",
+                fontSize: "11px",
                 fontWeight: "600",
                 whiteSpace: "nowrap",
                 cursor: "pointer",
@@ -616,10 +425,10 @@ export const App: React.FC = () => {
                 style={{
                   background: "none",
                   border: "none",
-                  color: selectedGroupId === g.id ? "#000000" : "#71717a",
+                  color: selectedGroupId === g.id ? "#000000" : "var(--fl-muted)",
                   cursor: "pointer",
                   padding: "0 0 0 4px",
-                  fontSize: "10px",
+                  fontSize: "11px",
                 }}
               >
                 &times;
@@ -635,11 +444,11 @@ export const App: React.FC = () => {
               key={p}
               onClick={() => setSelectedPlatform(p)}
               style={{
-                background: selectedPlatform === p ? "#ffffff" : "#09090b",
-                color: selectedPlatform === p ? "#000000" : "#a1a1aa",
-                border: "1px solid #27272a",
-                borderRadius: "4px",
-                padding: "3px 8px",
+                background: selectedPlatform === p ? "#ffffff" : "var(--fl-surface)",
+                color: selectedPlatform === p ? "#000000" : "var(--fl-muted)",
+                border: "1px solid var(--fl-border)",
+                borderRadius: "999px",
+                padding: "4px 10px",
                 fontSize: "10px",
                 fontWeight: "600",
                 textTransform: "uppercase",
@@ -681,6 +490,131 @@ export const App: React.FC = () => {
             onRenameNode={handleRenameNode}
           />
         )}
+
+        {/* Floating Bottom Dock (Image 2 & 3 reference) */}
+        <div className="forkline-dock-container">
+          <div className="forkline-dock">
+            <button
+              className="dock-btn"
+              title="New Group / Organize"
+              onClick={() => setIsCreateGroupOpen(true)}
+            >
+              <Plus size={16} />
+            </button>
+
+            <button
+              className="dock-btn"
+              title="Focus Search"
+              onClick={() => searchInputRef.current?.focus()}
+            >
+              <Search size={14} />
+            </button>
+
+            <button
+              className={`dock-btn ${viewMode === "tree" ? "pill-highlight" : ""}`}
+              title="Toggle View Mode"
+              onClick={() => setViewMode(viewMode === "bento" ? "tree" : "bento")}
+            >
+              {viewMode === "bento" ? <Network size={14} /> : <LayoutGrid size={14} />}
+            </button>
+
+            <button
+              className={`dock-btn ${isAccountMenuOpen ? "active" : "pill-highlight"}`}
+              title="Menu & Account"
+              onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)}
+            >
+              <User size={15} />
+            </button>
+
+            <button
+              className="dock-btn"
+              title="Theme Toggle"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+            </button>
+          </div>
+
+          {/* Floating Card Popover Menu with Vertical Accent Bar (Image 2 & 3 reference) */}
+          {isAccountMenuOpen && (
+            <div className="floating-card-menu">
+              <button
+                className={`floating-card-item ${activeMenuItem === "profile" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("profile");
+                }}
+              >
+                <User size={14} />
+                <span>My Account</span>
+              </button>
+
+              <button
+                className={`floating-card-item ${activeMenuItem === "upgrade" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("upgrade");
+                }}
+              >
+                <Sparkles size={14} />
+                <span>Upgrade & Pro</span>
+              </button>
+
+              <button
+                className={`floating-card-item ${activeMenuItem === "docs" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("docs");
+                  window.open("https://github.com", "_blank");
+                }}
+              >
+                <BookOpen size={14} />
+                <span>Documentation</span>
+              </button>
+
+              <button
+                className={`floating-card-item ${activeMenuItem === "export-md" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("export-md");
+                  handleExportMarkdown();
+                }}
+              >
+                <FileText size={14} />
+                <span>Export Markdown</span>
+              </button>
+
+              <button
+                className={`floating-card-item ${activeMenuItem === "export-json" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("export-json");
+                  handleExportJSON();
+                }}
+              >
+                <FileJson size={14} />
+                <span>Export JSON</span>
+              </button>
+
+              <div className="floating-card-divider" />
+
+              <button
+                className={`floating-card-item ${activeMenuItem === "settings" ? "active" : ""}`}
+                onClick={() => {
+                  setActiveMenuItem("settings");
+                  setIsSettingsOpen(true);
+                  setIsAccountMenuOpen(false);
+                }}
+              >
+                <Settings size={14} />
+                <span>Settings</span>
+              </button>
+
+              <button
+                className="floating-card-item danger"
+                onClick={handleClearAll}
+              >
+                <Trash2 size={14} />
+                <span>Clear / Reset Data</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Create Group Modal */}
@@ -692,8 +626,8 @@ export const App: React.FC = () => {
             left: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: "rgba(0, 0, 0, 0.75)",
-            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.72)",
+            backdropFilter: "blur(12px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -703,22 +637,25 @@ export const App: React.FC = () => {
         >
           <div
             style={{
-              backgroundColor: "#09090b",
-              border: "1px solid #27272a",
-              borderRadius: "10px",
+              backgroundColor: "var(--fl-surface)",
+              border: "1px solid var(--fl-border)",
+              borderRadius: "18px",
               width: "100%",
               maxWidth: "340px",
-              padding: "16px",
+              padding: "18px 20px",
               display: "flex",
               flexDirection: "column",
-              gap: "12px",
+              gap: "14px",
+              boxShadow: "0 24px 60px rgba(0, 0, 0, 0.65)",
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: "14px", fontWeight: "600" }}>New Branch Group</span>
+              <span style={{ fontSize: "15px", fontWeight: "650", color: "var(--fl-text)" }}>
+                New Branch Group
+              </span>
               <button
                 onClick={() => setIsCreateGroupOpen(false)}
-                style={{ background: "none", border: "none", color: "#71717a", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "var(--fl-muted)", cursor: "pointer", borderRadius: "999px" }}
               >
                 <X size={15} />
               </button>
@@ -733,11 +670,11 @@ export const App: React.FC = () => {
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                padding: "8px 10px",
-                color: "#fafafa",
+                backgroundColor: "var(--fl-canvas)",
+                border: "1px solid var(--fl-border)",
+                borderRadius: "12px",
+                padding: "9px 12px",
+                color: "var(--fl-text)",
                 fontSize: "13px",
                 outline: "none",
               }}
@@ -747,10 +684,10 @@ export const App: React.FC = () => {
                 onClick={() => setIsCreateGroupOpen(false)}
                 style={{
                   background: "transparent",
-                  color: "#a1a1aa",
-                  border: "1px solid #27272a",
-                  borderRadius: "6px",
-                  padding: "6px 12px",
+                  color: "var(--fl-muted)",
+                  border: "1px solid var(--fl-border)",
+                  borderRadius: "999px",
+                  padding: "7px 14px",
                   fontSize: "12px",
                   cursor: "pointer",
                 }}
@@ -763,10 +700,10 @@ export const App: React.FC = () => {
                   background: "#ffffff",
                   color: "#000000",
                   border: "none",
-                  borderRadius: "6px",
-                  padding: "6px 14px",
+                  borderRadius: "999px",
+                  padding: "7px 16px",
                   fontSize: "12px",
-                  fontWeight: "600",
+                  fontWeight: "650",
                   cursor: "pointer",
                 }}
               >

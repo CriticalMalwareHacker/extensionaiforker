@@ -32,8 +32,8 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     left: "0",
     width: "100vw",
     height: "100vh",
-    backgroundColor: "rgba(0, 0, 0, 0.68)",
-    backdropFilter: "blur(10px)",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    backdropFilter: "blur(12px)",
     zIndex: "2147483646",
     display: "flex",
     alignItems: "center",
@@ -44,14 +44,14 @@ export function openSelectiveForkModal(options: ModalOptions): void {
   const modal = document.createElement("div");
   modal.id = "forkline-modal";
   Object.assign(modal.style, {
-    backgroundColor: "#1b1b1b",
-    color: "#fafafa",
+    backgroundColor: "#151515",
+    color: "#f0f0f0",
     width: "90%",
     maxWidth: "540px",
-    maxHeight: "85vh",
-    borderRadius: "22px",
+    maxHeight: "88vh",
+    borderRadius: "18px",
     border: "1px solid #303030",
-    boxShadow: "0 24px 60px rgba(0, 0, 0, 0.48)",
+    boxShadow: "0 28px 70px rgba(0, 0, 0, 0.65)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
@@ -67,96 +67,98 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     const status = calculateCurrentTokens();
 
     modal.innerHTML = `
-      <div style="padding: 20px 22px 16px; border-bottom: 1px solid #303030; display: flex; justify-content: space-between; align-items: center;">
+      <div style="padding: 20px 22px 16px; border-bottom: 1px solid #303030; display: flex; justify-content: space-between; align-items: center; background: #151515;">
         <div>
-          <div style="font-size: 16px; font-weight: 600; color: #f1f1f1; letter-spacing: -0.3px;">
+          <div style="font-size: 16px; font-weight: 650; color: #ffffff; letter-spacing: -0.3px;">
             Selective Context Fork
           </div>
-          <div style="font-size: 12px; color: #9a9a9a; margin-top: 3px;">
+          <div style="font-size: 12px; color: #888888; margin-top: 3px;">
             Turn #${currentIndex + 1} (${availableMessages.length} total turns)
           </div>
         </div>
-        <button id="modal-close-btn" aria-label="Close" style="background: #272727; border: 1px solid #363636; border-radius: 999px; color: #b5b5b5; font-size: 18px; line-height: 1; cursor: pointer; width: 30px; height: 30px;">&times;</button>
+        <button id="modal-close-btn" aria-label="Close" style="background: transparent; border: none; color: #888888; font-size: 20px; line-height: 1; cursor: pointer; padding: 4px; border-radius: 999px;">&times;</button>
       </div>
 
-      <div style="padding: 18px 22px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
-        <!-- Token preview -->
-        <div style="background: #252525; padding: 12px 14px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #303030;">
+      <div style="padding: 18px 22px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; background: #151515;">
+        <!-- Token preview box (matches ss1.png) -->
+        <div style="background: #1d1d1d; padding: 12px 16px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #303030;">
           <div style="font-size: 12px; color: #b3b3b3;">
-            Estimated context size: <b style="color: #fafafa; font-family: monospace;">~${status.tokens.toLocaleString()} tokens</b>
+            Estimated context size: <b style="color: #ffffff; font-family: monospace;">~${status.tokens.toLocaleString()} tokens</b>
           </div>
-          <span style="font-size: 11px; color: ${status.exceedsWarning ? "#f43f5e" : "#71717a"};">
+          <span style="font-size: 11px; color: ${status.exceedsWarning ? "#f43f5e" : "#888888"}; font-weight: 500;">
             ${status.exceedsMax ? "Exceeds recommended limit" : status.exceedsWarning ? "High token count" : "Optimal"}
           </span>
         </div>
 
-        <!-- Target platforms -->
+        <!-- Target Platform(s) (matches ss1.png) -->
         <div>
-          <label style="font-size: 12px; font-weight: 500; color: #e4e4e7; display: block; margin-bottom: 6px;">
-            Open fork in
+          <label style="font-size: 12px; font-weight: 600; color: #ffffff; display: block; margin-bottom: 8px;">
+            Target Platform(s)
           </label>
           <div style="display: flex; gap: 8px;">
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #252525; padding: 10px; border-radius: 14px; border: 1px solid ${selectedSites.has("chatgpt") ? "#f0f0f0" : "#303030"}; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" data-site="chatgpt" ${selectedSites.has("chatgpt") ? "checked" : ""} />
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1d1d1d; padding: 10px 12px; border-radius: 10px; border: ${selectedSites.has("chatgpt") ? "1.5px solid #ffffff" : "1px solid #303030"}; cursor: pointer; font-size: 12px; color: ${selectedSites.has("chatgpt") ? "#ffffff" : "#b3b3b3"}; font-weight: 500; transition: all 0.12s ease;">
+              <input type="checkbox" data-site="chatgpt" ${selectedSites.has("chatgpt") ? "checked" : ""} style="accent-color: #ffffff; cursor: pointer;" />
               ChatGPT
             </label>
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #252525; padding: 10px; border-radius: 14px; border: 1px solid ${selectedSites.has("claude") ? "#f0f0f0" : "#303030"}; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" data-site="claude" ${selectedSites.has("claude") ? "checked" : ""} />
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1d1d1d; padding: 10px 12px; border-radius: 10px; border: ${selectedSites.has("claude") ? "1.5px solid #ffffff" : "1px solid #303030"}; cursor: pointer; font-size: 12px; color: ${selectedSites.has("claude") ? "#ffffff" : "#b3b3b3"}; font-weight: 500; transition: all 0.12s ease;">
+              <input type="checkbox" data-site="claude" ${selectedSites.has("claude") ? "checked" : ""} style="accent-color: #ffffff; cursor: pointer;" />
               Claude
             </label>
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #252525; padding: 10px; border-radius: 14px; border: 1px solid ${selectedSites.has("gemini") ? "#f0f0f0" : "#303030"}; cursor: pointer; font-size: 12px;">
-              <input type="checkbox" data-site="gemini" ${selectedSites.has("gemini") ? "checked" : ""} />
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1d1d1d; padding: 10px 12px; border-radius: 10px; border: ${selectedSites.has("gemini") ? "1.5px solid #ffffff" : "1px solid #303030"}; cursor: pointer; font-size: 12px; color: ${selectedSites.has("gemini") ? "#ffffff" : "#b3b3b3"}; font-weight: 500; transition: all 0.12s ease;">
+              <input type="checkbox" data-site="gemini" ${selectedSites.has("gemini") ? "checked" : ""} style="accent-color: #ffffff; cursor: pointer;" />
               Gemini
             </label>
           </div>
         </div>
 
-        <!-- Smart Compaction -->
-        <div style="background: #252525; padding: 13px 14px; border-radius: 16px; border: 1px solid #303030;">
-          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="compaction-checkbox" ${compaction === "summary" ? "checked" : ""} style="margin-top: 2px;" />
+        <!-- Smart Compaction (matches ss1.png) -->
+        <div style="background: #1d1d1d; padding: 13px 14px; border-radius: 12px; border: 1px solid #303030;">
+          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="compaction-checkbox" ${compaction === "summary" ? "checked" : ""} style="margin-top: 2px; accent-color: #ffffff; cursor: pointer;" />
             <div>
-              <div style="font-size: 12px; font-weight: 500; color: #fafafa;">
-                Compact earlier context
+              <div style="font-size: 12px; font-weight: 600; color: #ffffff;">
+                Smart Compaction
               </div>
-              <div style="font-size: 11px; color: #9a9a9a; margin-top: 3px; line-height: 1.4;">
+              <div style="font-size: 11px; color: #888888; margin-top: 3px; line-height: 1.4;">
                 Keep the last 6 turns and all code snippets verbatim; compress older turns.
               </div>
             </div>
           </label>
         </div>
 
-        <!-- Message List -->
+        <!-- Included Messages (matches ss1.png) -->
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 12px; font-weight: 500; color: #e4e4e7;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 12px; font-weight: 600; color: #ffffff;">
               Included Messages
             </label>
-            <button id="toggle-all-btn" style="background: none; border: none; color: #a1a1aa; font-size: 11px; cursor: pointer; text-decoration: underline;">
+            <button id="toggle-all-btn" style="background: none; border: none; color: #888888; font-size: 11px; cursor: pointer; text-decoration: underline;">
               ${excludedSet.size === 0 ? "Deselect All" : "Select All"}
             </button>
           </div>
 
-          <div id="messages-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto;">
+          <div id="messages-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 210px; overflow-y: auto;">
             ${availableMessages
               .map((msg) => {
                 const isExcluded = excludedSet.has(msg.index);
                 const roleBadge =
                   msg.role === "user"
-                    ? '<span style="background: #27272a; color: #fafafa; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: monospace;">USER</span>'
-                    : '<span style="background: #18181b; color: #a1a1aa; border: 1px solid #27272a; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: monospace;">AI</span>';
+                    ? '<span style="background: #27272a; color: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; font-family: monospace;">USER</span>'
+                    : '<span style="background: #1c1c1f; color: #a1a1aa; border: 1px solid #303030; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; font-family: monospace;">AI</span>';
 
-                const snippet = msg.text.slice(0, 100).replace(/</g, "&lt;");
+                const prefix = msg.role === "user" ? "You said " : "AI said ";
+                const rawSnippet = msg.text.slice(0, 85).replace(/</g, "&lt;");
+                const snippet = `${prefix}${rawSnippet}`;
 
                 return `
-                <div style="display: flex; align-items: center; gap: 8px; background: #252525; padding: 9px 11px; border-radius: 12px; border: 1px solid ${isExcluded ? "#292929" : "#353535"}; opacity: ${isExcluded ? "0.4" : "1"};">
-                  <input type="checkbox" class="msg-checkbox" data-index="${msg.index}" ${isExcluded ? "" : "checked"} />
+                <div style="display: flex; align-items: center; gap: 8px; background: #1d1d1d; padding: 9px 12px; border-radius: 10px; border: 1px solid ${isExcluded ? "#262626" : "#303030"}; opacity: ${isExcluded ? "0.4" : "1"}; transition: all 0.12s ease;">
+                  <input type="checkbox" class="msg-checkbox" data-index="${msg.index}" ${isExcluded ? "" : "checked"} style="accent-color: #ffffff; cursor: pointer;" />
                   ${roleBadge}
                   <div style="font-size: 11px; color: #d4d4d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
                     ${snippet}...
                   </div>
-                  ${msg.hasAttachments ? '<span title="Attachment" style="font-size: 9px; color: #a1a1aa;">📎</span>' : ""}
-                  ${msg.codeBlocks ? '<span title="Code" style="font-size: 9px; color: #fafafa;">💻</span>' : ""}
+                  ${msg.hasAttachments ? '<span title="Attachment" style="font-size: 9px; color: #888888;">📎</span>' : ""}
+                  ${msg.codeBlocks ? '<span title="Code" style="font-size: 9px; color: #f0f0f0;">💻</span>' : ""}
                 </div>
               `;
               })
@@ -165,12 +167,12 @@ export function openSelectiveForkModal(options: ModalOptions): void {
         </div>
       </div>
 
-      <div style="padding: 14px 22px 20px; border-top: 1px solid #303030; display: flex; justify-content: flex-end; gap: 8px; background: #1b1b1b;">
-        <button id="modal-cancel-btn" style="background: #252525; color: #b5b5b5; border: 1px solid #363636; padding: 9px 14px; border-radius: 999px; font-size: 12px; cursor: pointer;">
+      <div style="padding: 14px 22px 18px; border-top: 1px solid #303030; display: flex; justify-content: flex-end; gap: 10px; background: #151515;">
+        <button id="modal-cancel-btn" style="background: #242424; color: #ffffff; border: 1px solid #363636; padding: 9px 16px; border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer; transition: background 0.12s ease;">
           Cancel
         </button>
-        <button id="modal-fork-btn" style="background: #f1f1f1; color: #161616; border: none; padding: 9px 16px; border-radius: 999px; font-size: 12px; font-weight: 650; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          Start Fork (${selectedSites.size} ${selectedSites.size > 1 ? "tabs" : "chat"})
+        <button id="modal-fork-btn" style="background: #ffffff; color: #000000; border: none; padding: 9px 20px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: opacity 0.12s ease;">
+          Start Fork (${selectedSites.size} ${selectedSites.size > 1 ? "chats" : "chat"})
         </button>
       </div>
     `;

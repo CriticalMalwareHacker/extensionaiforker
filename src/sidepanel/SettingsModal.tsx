@@ -45,8 +45,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
         left: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "rgba(0, 0, 0, 0.75)",
-        backdropFilter: "blur(4px)",
+        backgroundColor: "rgba(0, 0, 0, 0.72)",
+        backdropFilter: "blur(12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -56,42 +56,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
     >
       <div
         style={{
-          backgroundColor: "#09090b",
-          border: "1px solid #27272a",
-          borderRadius: "10px",
+          backgroundColor: "var(--fl-surface, #1d1d1d)",
+          border: "1px solid var(--fl-border, #303030)",
+          borderRadius: "18px",
           width: "100%",
           maxWidth: "480px",
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)",
-          color: "#fafafa",
+          boxShadow: "0 28px 70px rgba(0, 0, 0, 0.7)",
+          color: "var(--fl-text, #f0f0f0)",
           fontFamily: "'Inter', sans-serif",
           overflow: "hidden",
         }}
       >
         <div
           style={{
-            padding: "14px 18px",
-            borderBottom: "1px solid #18181b",
+            padding: "16px 20px",
+            borderBottom: "1px solid var(--fl-border, #303030)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <span style={{ fontWeight: "600", fontSize: "14px", letterSpacing: "-0.2px" }}>Settings</span>
+          <span style={{ fontWeight: "650", fontSize: "15px", letterSpacing: "-0.2px" }}>Settings</span>
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", color: "#71717a", cursor: "pointer", padding: "4px" }}
+            style={{ background: "none", border: "none", color: "var(--fl-muted, #9a9a9a)", cursor: "pointer", padding: "4px", borderRadius: "999px" }}
           >
             <X size={15} />
           </button>
         </div>
 
-        <div style={{ padding: "18px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div style={{ padding: "18px 20px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Target Site */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "6px" }}>
+            <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--fl-text, #f0f0f0)", display: "block", marginBottom: "6px" }}>
               Default Target Platform
             </label>
             <select
@@ -99,11 +99,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               onChange={(e) => setSettings({ ...settings, defaultTargetSite: e.target.value as any })}
               style={{
                 width: "100%",
-                padding: "7px 10px",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                color: "#f4f4f5",
+                padding: "8px 12px",
+                backgroundColor: "var(--fl-canvas, #151515)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "10px",
+                color: "var(--fl-text, #f0f0f0)",
                 fontSize: "12px",
                 fontFamily: "inherit",
                 outline: "none",
@@ -118,10 +118,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
 
           {/* Primer template */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "4px" }}>
+            <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--fl-text, #f0f0f0)", display: "block", marginBottom: "4px" }}>
               Fork Primer Template
             </label>
-            <div style={{ fontSize: "11px", color: "#71717a", marginBottom: "6px" }}>
+            <div style={{ fontSize: "11px", color: "var(--fl-muted, #9a9a9a)", marginBottom: "6px" }}>
               Must include <code>{"{CONTEXT}"}</code> placeholder.
             </div>
             <textarea
@@ -131,11 +131,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                padding: "8px 10px",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                color: "#f4f4f5",
+                padding: "8px 12px",
+                backgroundColor: "var(--fl-canvas, #151515)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "10px",
+                color: "var(--fl-text, #f0f0f0)",
                 fontSize: "11px",
                 fontFamily: "monospace",
                 outline: "none",
@@ -145,7 +145,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
 
           {/* Compaction count */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "6px" }}>
+            <label style={{ fontSize: "12px", fontWeight: "600", color: "var(--fl-text, #f0f0f0)", display: "block", marginBottom: "6px" }}>
               Compaction: Keep Recent Turns Verbatim
             </label>
             <input
@@ -155,12 +155,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               value={settings.compactKeepRecent}
               onChange={(e) => setSettings({ ...settings, compactKeepRecent: Number(e.target.value) })}
               style={{
-                width: "70px",
-                padding: "5px 8px",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                color: "#f4f4f5",
+                width: "80px",
+                padding: "6px 10px",
+                backgroundColor: "var(--fl-canvas, #151515)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "10px",
+                color: "var(--fl-text, #f0f0f0)",
                 fontSize: "12px",
                 fontFamily: "inherit",
                 outline: "none",
@@ -169,19 +169,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
           </div>
 
           {/* On-device Gemini Nano */}
-          <div style={{ backgroundColor: "#000000", padding: "12px", borderRadius: "6px", border: "1px solid #18181b" }}>
+          <div style={{ backgroundColor: "var(--fl-canvas, #151515)", padding: "12px 14px", borderRadius: "12px", border: "1px solid var(--fl-border, #303030)" }}>
             <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={settings.useGeminiNano}
                 onChange={(e) => setSettings({ ...settings, useGeminiNano: e.target.checked })}
-                style={{ marginTop: "2px" }}
+                style={{ marginTop: "2px", accentColor: "#ffffff" }}
               />
               <div>
-                <div style={{ fontSize: "12px", fontWeight: "500", color: "#fafafa", display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ fontSize: "12px", fontWeight: "600", color: "#ffffff", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Cpu size={13} /> On-Device AI (Gemini Nano)
                 </div>
-                <div style={{ fontSize: "11px", color: "#71717a", marginTop: "2px" }}>
+                <div style={{ fontSize: "11px", color: "var(--fl-muted, #9a9a9a)", marginTop: "3px" }}>
                   Uses Chrome built-in Prompt API when available. 100% private and on-device.
                 </div>
               </div>
@@ -190,7 +190,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
 
           {/* Cloud Run Fallback */}
           <div>
-            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+            <label style={{ fontSize: "12px", fontWeight: "650", color: "var(--fl-text, #f0f0f0)", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
               <Cloud size={13} /> Cloud Run Proxy (Optional Fallback)
             </label>
             <input
@@ -201,11 +201,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                padding: "7px 10px",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                color: "#f4f4f5",
+                padding: "8px 12px",
+                backgroundColor: "var(--fl-canvas, #151515)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "10px",
+                color: "var(--fl-text, #f0f0f0)",
                 fontSize: "12px",
                 fontFamily: "inherit",
                 marginBottom: "8px",
@@ -221,23 +221,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                padding: "7px 10px",
-                backgroundColor: "#000000",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                color: "#f4f4f5",
+                padding: "8px 12px",
+                backgroundColor: "var(--fl-canvas, #151515)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "10px",
+                color: "var(--fl-text, #f0f0f0)",
                 fontSize: "12px",
                 fontFamily: "inherit",
                 outline: "none",
               }}
             />
-            <div style={{ fontSize: "11px", color: "#71717a", marginTop: "6px", lineHeight: 1.45 }}>
+            <div style={{ fontSize: "11px", color: "var(--fl-muted, #9a9a9a)", marginTop: "6px", lineHeight: 1.45 }}>
               Use an HTTPS endpoint and its bearer token. Conversation text is sent only when this fallback is enabled.
             </div>
           </div>
 
           {/* Reset button */}
-          <div style={{ paddingTop: "12px", borderTop: "1px solid #18181b" }}>
+          <div style={{ paddingTop: "12px", borderTop: "1px solid var(--fl-border, #303030)" }}>
             <button
               onClick={handleClearAll}
               style={{
@@ -245,10 +245,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
                 alignItems: "center",
                 gap: "5px",
                 background: "transparent",
-                color: "#71717a",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                padding: "5px 10px",
+                color: "var(--fl-muted, #9a9a9a)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "999px",
+                padding: "6px 12px",
                 fontSize: "11px",
                 cursor: "pointer",
                 transition: "all 0.15s ease",
@@ -258,8 +258,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
                 (e.currentTarget as HTMLElement).style.borderColor = "#7f1d1d";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "#71717a";
-                (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
+                (e.currentTarget as HTMLElement).style.color = "var(--fl-muted, #9a9a9a)";
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--fl-border, #303030)";
               }}
             >
               <Trash2 size={12} />
@@ -270,22 +270,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
 
         <div
           style={{
-            padding: "12px 18px",
-            borderTop: "1px solid #18181b",
+            padding: "14px 20px",
+            borderTop: "1px solid var(--fl-border, #303030)",
             display: "flex",
             justifyContent: "flex-end",
             gap: "8px",
-            backgroundColor: "#000000",
+            backgroundColor: "var(--fl-surface, #1d1d1d)",
           }}
         >
           <button
             onClick={onClose}
             style={{
               background: "transparent",
-              color: "#a1a1aa",
-              border: "1px solid #27272a",
-              borderRadius: "6px",
-              padding: "6px 12px",
+              color: "var(--fl-muted, #9a9a9a)",
+              border: "1px solid var(--fl-border, #303030)",
+              borderRadius: "999px",
+              padding: "7px 14px",
               fontSize: "12px",
               cursor: "pointer",
             }}
@@ -298,10 +298,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               background: "#ffffff",
               color: "#000000",
               border: "none",
-              borderRadius: "6px",
-              padding: "6px 14px",
+              borderRadius: "999px",
+              padding: "7px 18px",
               fontSize: "12px",
-              fontWeight: "600",
+              fontWeight: "650",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",

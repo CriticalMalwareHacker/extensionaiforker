@@ -47,8 +47,8 @@ export function injectForkButtons(
       fontSize: "12px",
       fontWeight: "500",
       color: "#f4f4f5",
-      backgroundColor: "#09090b",
-      border: "1px solid #27272a",
+      backgroundColor: "#151515",
+      border: "1px solid #303030",
       borderRadius: "999px 0 0 999px",
       cursor: "pointer",
       transition: "all 0.15s ease",
@@ -76,8 +76,8 @@ export function injectForkButtons(
 
     forkBtn.addEventListener("mouseleave", () => {
       forkBtn.style.color = "#f4f4f5";
-      forkBtn.style.backgroundColor = "#09090b";
-      forkBtn.style.borderColor = "#27272a";
+      forkBtn.style.backgroundColor = "#151515";
+      forkBtn.style.borderColor = "#303030";
       const icon = forkBtn.querySelector("svg");
       if (icon) icon.style.stroke = "#fafafa";
     });
@@ -93,8 +93,8 @@ export function injectForkButtons(
       padding: "4px 5px",
       fontSize: "10px",
       color: "#a1a1aa",
-      backgroundColor: "#09090b",
-      border: "1px solid #27272a",
+      backgroundColor: "#151515",
+      border: "1px solid #303030",
       borderLeft: "none",
       borderRadius: "0 999px 999px 0",
       cursor: "pointer",
@@ -115,8 +115,8 @@ export function injectForkButtons(
 
     optionsBtn.addEventListener("mouseleave", () => {
       optionsBtn.style.color = "#a1a1aa";
-      optionsBtn.style.backgroundColor = "#09090b";
-      optionsBtn.style.borderColor = "#27272a";
+      optionsBtn.style.backgroundColor = "#151515";
+      optionsBtn.style.borderColor = "#303030";
     });
 
     // 1-Click Fork

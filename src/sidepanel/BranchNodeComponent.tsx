@@ -38,15 +38,15 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
   return (
     <div
       style={{
-        backgroundColor: "#09090b",
-        border: isCurrentTab ? "2px solid #ffffff" : "1px solid #27272a",
-        borderRadius: "10px",
-        padding: "12px 14px",
+        backgroundColor: "var(--fl-surface, #1d1d1d)",
+        border: isCurrentTab ? "2px solid #ffffff" : "1px solid var(--fl-border, #303030)",
+        borderRadius: "18px",
+        padding: "14px 16px",
         width: "250px",
         boxShadow: isCurrentTab
-          ? "0 0 0 1px #ffffff, 0 10px 25px -5px rgba(0, 0, 0, 0.9)"
-          : "0 4px 15px -2px rgba(0, 0, 0, 0.7)",
-        color: "#fafafa",
+          ? "0 0 0 2px #eeeeee, 0 16px 40px rgba(0, 0, 0, 0.8)"
+          : "0 8px 24px rgba(0, 0, 0, 0.5)",
+        color: "var(--fl-text, #f0f0f0)",
         fontFamily: "'Inter', sans-serif",
         position: "relative",
         userSelect: "none",
@@ -57,10 +57,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         type="target"
         position={Position.Top}
         style={{
-          background: "#fafafa",
+          background: "#ffffff",
           width: 9,
           height: 9,
-          border: "2px solid #09090b",
+          border: "2px solid #151515",
           top: -5,
         }}
       />
@@ -71,20 +71,20 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "8px",
+          marginBottom: "10px",
         }}
       >
         <span
           style={{
-            backgroundColor: "#18181b",
-            color: "#d4d4d8",
-            border: "1px solid #27272a",
+            backgroundColor: "var(--fl-surface-raised, #242424)",
+            color: "var(--fl-text, #f0f0f0)",
+            border: "1px solid var(--fl-border, #303030)",
             fontSize: "10px",
-            fontWeight: "600",
+            fontWeight: "700",
             fontFamily: "monospace",
             textTransform: "uppercase",
-            padding: "2px 7px",
-            borderRadius: "4px",
+            padding: "2px 8px",
+            borderRadius: "999px",
             letterSpacing: "0.5px",
           }}
         >
@@ -96,10 +96,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
             <span
               title="Merged back into parent"
               style={{
-                color: "#fafafa",
-                border: "1px solid #3f3f46",
-                borderRadius: "3px",
-                padding: "2px 4px",
+                color: "#ffffff",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "999px",
+                padding: "2px 6px",
                 display: "inline-flex",
                 alignItems: "center",
               }}
@@ -111,10 +111,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
             <span
               title="Smart compacted"
               style={{
-                color: "#a1a1aa",
-                border: "1px solid #27272a",
-                borderRadius: "3px",
-                padding: "2px 4px",
+                color: "var(--fl-muted, #9a9a9a)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "999px",
+                padding: "2px 6px",
                 display: "inline-flex",
                 alignItems: "center",
               }}
@@ -122,14 +122,14 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               <Cpu size={11} />
             </span>
           )}
-          <span style={{ fontSize: "11px", color: "#71717a", fontWeight: "500" }}>
+          <span style={{ fontSize: "11px", color: "var(--fl-muted, #9a9a9a)", fontWeight: "500" }}>
             ~{node.tokenEstimate.toLocaleString()} tkn
           </span>
         </div>
       </div>
 
       {/* Branch Title & Inline Rename */}
-      <div style={{ marginBottom: "12px" }}>
+      <div style={{ marginBottom: "14px" }}>
         {isEditing ? (
           <div
             className="nodrag nopan"
@@ -148,26 +148,26 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               className="nodrag nopan"
               style={{
                 flex: 1,
-                backgroundColor: "#000000",
+                backgroundColor: "var(--fl-canvas, #151515)",
                 border: "1px solid #ffffff",
-                borderRadius: "4px",
+                borderRadius: "999px",
                 color: "#ffffff",
                 fontSize: "12px",
-                padding: "3px 6px",
+                padding: "5px 10px",
                 outline: "none",
                 fontFamily: "inherit",
               }}
             />
             <button
+              onClick={handleSaveRename}
+              title="Save title"
               className="nodrag nopan"
-              onClick={(e) => handleSaveRename(e)}
-              title="Save"
               style={{
                 background: "#ffffff",
                 color: "#000000",
                 border: "none",
-                borderRadius: "4px",
-                padding: "4px",
+                borderRadius: "999px",
+                padding: "5px 8px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -176,15 +176,15 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               <Check size={11} />
             </button>
             <button
-              className="nodrag nopan"
               onClick={handleCancelRename}
               title="Cancel"
+              className="nodrag nopan"
               style={{
                 background: "transparent",
-                color: "#a1a1aa",
-                border: "1px solid #27272a",
-                borderRadius: "4px",
-                padding: "4px",
+                color: "var(--fl-muted, #9a9a9a)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "999px",
+                padding: "5px 8px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -199,20 +199,17 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               display: "flex",
               alignItems: "flex-start",
               justifyContent: "space-between",
-              gap: "4px",
+              gap: "6px",
             }}
           >
             <div
               style={{
                 fontSize: "13px",
-                fontWeight: "600",
-                color: "#fafafa",
+                fontWeight: "650",
+                color: "var(--fl-text, #f0f0f0)",
                 lineHeight: "1.4",
                 flex: 1,
-                display: "-webkit-box",
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
+                letterSpacing: "-0.2px",
               }}
               title="Double-click to rename"
               onDoubleClick={(e) => {
@@ -223,54 +220,52 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               {node.label}
             </div>
             <button
-              className="nodrag nopan"
               onClick={(e) => {
                 e.stopPropagation();
                 setIsEditing(true);
               }}
               title="Rename branch"
+              className="nodrag nopan"
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#71717a",
+                color: "var(--fl-muted, #9a9a9a)",
                 cursor: "pointer",
                 padding: "2px",
                 display: "flex",
                 alignItems: "center",
                 opacity: 0.7,
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = "1";
-                (e.currentTarget as HTMLElement).style.color = "#ffffff";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.opacity = "0.7";
-                (e.currentTarget as HTMLElement).style.color = "#71717a";
+                borderRadius: "999px",
               }}
             >
               <Pencil size={11} />
             </button>
           </div>
         )}
+
+        <div style={{ fontSize: "10px", color: "var(--fl-muted, #9a9a9a)", marginTop: "4px" }}>
+          Turn #{((node.forkedAtIndex ?? 0) + 1)} &bull;{" "}
+          {new Date(node.createdAt).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
       </div>
 
-      {/* Action Footer */}
+      {/* Action Buttons Row */}
       <div
         className="nodrag nopan"
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          paddingTop: "8px",
-          borderTop: "1px solid #18181b",
+          paddingTop: "10px",
+          borderTop: "1px solid var(--fl-border, #303030)",
         }}
       >
         <button
+          onClick={() => onSelect(node)}
           className="nodrag nopan"
-          onClick={(e) => {
-            e.stopPropagation();
-            onSelect(node);
-          }}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -278,80 +273,59 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
             background: "#ffffff",
             color: "#000000",
             border: "none",
-            borderRadius: "6px",
-            padding: "5px 10px",
+            borderRadius: "999px",
+            padding: "5px 12px",
             fontSize: "11px",
-            fontWeight: "600",
+            fontWeight: "650",
             cursor: "pointer",
-            transition: "opacity 0.15s ease",
           }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.9")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
         >
-          <ExternalLink size={12} />
-          {node.chat?.url ? "Open" : "Open"}
+          <ExternalLink size={11} />
+          Open
         </button>
 
-        <div className="nodrag nopan" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {!node.isMerged && (
             <button
+              onClick={() => onMerge(node)}
               className="nodrag nopan"
-              onClick={(e) => {
-                e.stopPropagation();
-                onMerge(node);
-              }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "4px",
-                background: "#18181b",
-                color: "#f4f4f5",
-                border: "1px solid #27272a",
-                borderRadius: "6px",
-                padding: "5px 8px",
+                background: "var(--fl-surface-raised, #242424)",
+                color: "var(--fl-text, #f0f0f0)",
+                border: "1px solid var(--fl-border, #303030)",
+                borderRadius: "999px",
+                padding: "5px 10px",
                 fontSize: "11px",
                 fontWeight: "500",
                 cursor: "pointer",
-                transition: "background 0.15s ease",
               }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#27272a")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-              title="Merge summary into parent conversation"
             >
-              <GitMerge size={12} />
+              <GitMerge size={11} />
               Merge
             </button>
           )}
 
           <button
+            onClick={() => onDelete(node.id)}
             className="nodrag nopan"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(node.id);
-            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               background: "transparent",
-              color: "#71717a",
-              border: "1px solid #27272a",
-              borderRadius: "6px",
-              padding: "5px 7px",
+              color: "var(--fl-muted, #9a9a9a)",
+              border: "1px solid var(--fl-border, #303030)",
+              borderRadius: "999px",
+              width: "26px",
+              height: "26px",
               cursor: "pointer",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#ffffff";
-              (e.currentTarget as HTMLElement).style.borderColor = "#71717a";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.color = "#71717a";
-              (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
             }}
             title="Delete this branch"
           >
-            <Trash2 size={12} />
+            <Trash2 size={11} />
           </button>
         </div>
       </div>
@@ -360,10 +334,10 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         type="source"
         position={Position.Bottom}
         style={{
-          background: "#fafafa",
+          background: "#ffffff",
           width: 9,
           height: 9,
-          border: "2px solid #09090b",
+          border: "2px solid #151515",
           bottom: -5,
         }}
       />

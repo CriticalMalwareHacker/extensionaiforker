@@ -94,16 +94,17 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
-          color: "#71717a",
+          color: "var(--fl-muted)",
           padding: "32px",
           textAlign: "center",
+          background: "var(--fl-canvas)",
         }}
       >
-        <MessageSquare size={28} style={{ marginBottom: "12px", opacity: 0.5 }} />
-        <div style={{ fontSize: "14px", fontWeight: "600", color: "#fafafa", marginBottom: "4px" }}>
+        <MessageSquare size={32} style={{ marginBottom: "12px", opacity: 0.4 }} />
+        <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--fl-text)", marginBottom: "4px" }}>
           No branches found
         </div>
-        <div style={{ fontSize: "12px", color: "#71717a" }}>
+        <div style={{ fontSize: "12px", color: "var(--fl-muted)" }}>
           Try clearing your search query or group filter.
         </div>
       </div>
@@ -111,17 +112,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   }
 
   return (
-    <div
-      style={{
-        padding: "12px",
-        display: "grid",
-        gridTemplateColumns: "1fr",
-        gap: "10px",
-        overflowY: "auto",
-        height: "100%",
-        boxSizing: "border-box",
-      }}
-    >
+    <div className="branch-grid" style={{ paddingBottom: "70px" }}>
       {filteredNodes.map((node) => {
         const site = (node.chat?.site || node.tags?.[0] || "chatgpt") as Site;
         const isCurrentTab = Boolean(
@@ -134,41 +125,24 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
         return (
           <div
             key={node.id}
+            className="branch-card"
+            data-active={isCurrentTab ? "true" : "false"}
             onClick={() => onSelectNode(node)}
-            style={{
-              backgroundColor: "#09090b",
-              border: isCurrentTab ? "2px solid #ffffff" : "1px solid #27272a",
-              borderRadius: "10px",
-              padding: "14px 16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              boxShadow: isCurrentTab ? "0 0 0 1px #ffffff" : "none",
-              position: "relative",
-            }}
-            onMouseEnter={(e) => {
-              if (!isCurrentTab) (e.currentTarget as HTMLElement).style.borderColor = "#3f3f46";
-            }}
-            onMouseLeave={(e) => {
-              if (!isCurrentTab) (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
-            }}
           >
             {/* Top Row: Platform badge + Group badge + token */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                 <span
                   style={{
-                    backgroundColor: "#18181b",
-                    color: "#fafafa",
-                    border: "1px solid #27272a",
+                    backgroundColor: "var(--fl-surface-raised)",
+                    color: "var(--fl-text)",
+                    border: "1px solid var(--fl-border)",
                     fontSize: "10px",
-                    fontWeight: "600",
+                    fontWeight: "700",
                     fontFamily: "monospace",
                     textTransform: "uppercase",
-                    padding: "2px 7px",
-                    borderRadius: "4px",
+                    padding: "2px 8px",
+                    borderRadius: "999px",
                     letterSpacing: "0.5px",
                   }}
                 >
@@ -186,14 +160,15 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "4px",
-                      backgroundColor: groupName ? "#18181b" : "transparent",
-                      color: groupName ? "#fafafa" : "#71717a",
-                      border: "1px solid #27272a",
+                      backgroundColor: groupName ? "var(--fl-surface-raised)" : "transparent",
+                      color: groupName ? "var(--fl-text)" : "var(--fl-muted)",
+                      border: "1px solid var(--fl-border)",
                       fontSize: "10px",
                       fontWeight: "500",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
                       cursor: "pointer",
+                      transition: "all 0.12s ease",
                     }}
                   >
                     <Folder size={10} />
@@ -201,29 +176,34 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     <ChevronDown size={9} />
                   </button>
 
+                  {/* Assign Group Floating Dropdown Menu (Image 2 & 3 reference) */}
                   {isDropdownOpen && (
                     <div
                       style={{
                         position: "absolute",
                         top: "100%",
                         left: 0,
-                        marginTop: "4px",
-                        backgroundColor: "#09090b",
-                        border: "1px solid #27272a",
-                        borderRadius: "6px",
-                        boxShadow: "0 10px 25px rgba(0, 0, 0, 0.9)",
+                        marginTop: "6px",
+                        backgroundColor: "var(--fl-surface)",
+                        border: "1px solid var(--fl-border)",
+                        borderRadius: "16px",
+                        boxShadow: "0 16px 40px rgba(0, 0, 0, 0.7)",
                         zIndex: 300,
-                        minWidth: "140px",
-                        padding: "4px",
+                        minWidth: "150px",
+                        padding: "6px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "2px",
                       }}
                     >
                       <div
                         style={{
                           fontSize: "10px",
-                          fontWeight: "600",
-                          color: "#71717a",
+                          fontWeight: "700",
+                          color: "var(--fl-muted)",
                           padding: "4px 8px",
                           textTransform: "uppercase",
+                          letterSpacing: "0.05em",
                         }}
                       >
                         Assign Group
@@ -238,16 +218,17 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
-                          padding: "6px 8px",
+                          padding: "6px 10px",
                           background: "none",
                           border: "none",
-                          borderRadius: "4px",
-                          color: !node.groupId ? "#ffffff" : "#a1a1aa",
-                          fontSize: "11px",
+                          borderRadius: "10px",
+                          color: !node.groupId ? "var(--fl-text)" : "var(--fl-muted)",
+                          fontSize: "12px",
                           cursor: "pointer",
                           textAlign: "left",
+                          transition: "background 0.12s ease",
                         }}
-                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                        onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--fl-surface-raised)")}
                         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
                       >
                         <span>None (Ungrouped)</span>
@@ -266,16 +247,17 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            padding: "6px 8px",
+                            padding: "6px 10px",
                             background: "none",
                             border: "none",
-                            borderRadius: "4px",
-                            color: node.groupId === g.id ? "#ffffff" : "#a1a1aa",
-                            fontSize: "11px",
+                            borderRadius: "10px",
+                            color: node.groupId === g.id ? "var(--fl-text)" : "var(--fl-muted)",
+                            fontSize: "12px",
                             cursor: "pointer",
                             textAlign: "left",
+                            transition: "background 0.12s ease",
                           }}
-                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--fl-surface-raised)")}
                           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
                         >
                           <span>{g.name}</span>
@@ -290,11 +272,11 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                   <span
                     style={{
                       fontSize: "10px",
-                      fontWeight: "600",
+                      fontWeight: "700",
                       color: "#000000",
                       backgroundColor: "#ffffff",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
+                      padding: "2px 8px",
+                      borderRadius: "999px",
                     }}
                   >
                     Active
@@ -302,14 +284,14 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                 )}
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#71717a" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "var(--fl-muted)" }}>
                 {node.isMerged && (
                   <span title="Merged into parent" style={{ color: "#ffffff", display: "flex" }}>
                     <GitMerge size={12} />
                   </span>
                 )}
                 {node.compaction === "summary" && (
-                  <span title="Compacted" style={{ color: "#a1a1aa", display: "flex" }}>
+                  <span title="Compacted" style={{ color: "var(--fl-muted)", display: "flex" }}>
                     <Cpu size={12} />
                   </span>
                 )}
@@ -336,12 +318,12 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     autoFocus
                     style={{
                       flex: 1,
-                      backgroundColor: "#000000",
+                      backgroundColor: "var(--fl-canvas)",
                       border: "1px solid #ffffff",
-                      borderRadius: "5px",
+                      borderRadius: "999px",
                       color: "#ffffff",
                       fontSize: "13px",
-                      padding: "4px 8px",
+                      padding: "6px 12px",
                       outline: "none",
                       fontFamily: "inherit",
                     }}
@@ -353,11 +335,12 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                       background: "#ffffff",
                       color: "#000000",
                       border: "none",
-                      borderRadius: "4px",
-                      padding: "5px",
+                      borderRadius: "999px",
+                      padding: "6px 10px",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
+                      fontWeight: "600",
                     }}
                   >
                     <Check size={12} />
@@ -367,10 +350,10 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     title="Cancel"
                     style={{
                       background: "transparent",
-                      color: "#a1a1aa",
-                      border: "1px solid #27272a",
-                      borderRadius: "4px",
-                      padding: "5px",
+                      color: "var(--fl-muted)",
+                      border: "1px solid var(--fl-border)",
+                      borderRadius: "999px",
+                      padding: "6px 10px",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -386,11 +369,10 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     alignItems: "flex-start",
                     justifyContent: "space-between",
                     gap: "6px",
-                    group: "title-container",
                   }}
                 >
                   <div
-                    style={{ fontSize: "13px", fontWeight: "600", color: "#fafafa", lineHeight: "1.4", flex: 1 }}
+                    style={{ fontSize: "14px", fontWeight: "650", color: "var(--fl-text)", lineHeight: "1.4", flex: 1, letterSpacing: "-0.2px" }}
                     title="Double-click to rename"
                     onDoubleClick={(e) => handleStartRename(node, e)}
                   >
@@ -402,13 +384,14 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     style={{
                       background: "transparent",
                       border: "none",
-                      color: "#71717a",
+                      color: "var(--fl-muted)",
                       cursor: "pointer",
                       padding: "2px",
                       display: "flex",
                       alignItems: "center",
                       opacity: 0.7,
                       transition: "opacity 0.15s ease",
+                      borderRadius: "999px",
                     }}
                     onMouseEnter={(e) => {
                       (e.currentTarget as HTMLElement).style.opacity = "1";
@@ -416,14 +399,14 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.opacity = "0.7";
-                      (e.currentTarget as HTMLElement).style.color = "#71717a";
+                      (e.currentTarget as HTMLElement).style.color = "var(--fl-muted)";
                     }}
                   >
                     <Pencil size={12} />
                   </button>
                 </div>
               )}
-              <div style={{ fontSize: "11px", color: "#71717a", marginTop: "3px" }}>
+              <div style={{ fontSize: "11px", color: "var(--fl-muted)", marginTop: "4px" }}>
                 Forked at message #{((node.forkedAtIndex ?? 0) + 1)}
               </div>
             </div>
@@ -434,8 +417,8 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                paddingTop: "10px",
-                borderTop: "1px solid #18181b",
+                paddingTop: "12px",
+                borderTop: "1px solid var(--fl-border)",
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -444,14 +427,14 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "5px",
+                  gap: "6px",
                   background: "#ffffff",
                   color: "#000000",
                   border: "none",
-                  borderRadius: "6px",
-                  padding: "5px 12px",
-                  fontSize: "11px",
-                  fontWeight: "600",
+                  borderRadius: "999px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: "650",
                   cursor: "pointer",
                   transition: "opacity 0.15s ease",
                 }}
@@ -470,18 +453,18 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "4px",
-                      background: "#18181b",
-                      color: "#f4f4f5",
-                      border: "1px solid #27272a",
-                      borderRadius: "6px",
-                      padding: "5px 10px",
+                      background: "var(--fl-surface-raised)",
+                      color: "var(--fl-text)",
+                      border: "1px solid var(--fl-border)",
+                      borderRadius: "999px",
+                      padding: "6px 12px",
                       fontSize: "11px",
                       fontWeight: "500",
                       cursor: "pointer",
                       transition: "background 0.15s ease",
                     }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#27272a")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#2e2e2e")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "var(--fl-surface-raised)")}
                   >
                     <GitMerge size={12} />
                     Merge
@@ -495,10 +478,11 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     alignItems: "center",
                     justifyContent: "center",
                     background: "transparent",
-                    color: "#71717a",
-                    border: "1px solid #27272a",
-                    borderRadius: "6px",
-                    padding: "5px 8px",
+                    color: "var(--fl-muted)",
+                    border: "1px solid var(--fl-border)",
+                    borderRadius: "999px",
+                    width: "28px",
+                    height: "28px",
                     cursor: "pointer",
                     transition: "all 0.15s ease",
                   }}
@@ -507,8 +491,8 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     (e.currentTarget as HTMLElement).style.borderColor = "#71717a";
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.color = "#71717a";
-                    (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
+                    (e.currentTarget as HTMLElement).style.color = "var(--fl-muted)";
+                    (e.currentTarget as HTMLElement).style.borderColor = "var(--fl-border)";
                   }}
                   title="Delete this branch"
                 >

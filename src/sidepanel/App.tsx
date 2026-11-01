@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { BranchNode } from "../shared/types";
-import { getAllNodes, deleteNode, saveNode, db } from "../background/db";
+import { BranchNode, BranchGroup } from "../shared/types";
+import {
+  getAllNodes,
+  deleteNode,
+  saveNode,
+  getAllGroups,
+  createGroup,
+  deleteGroup,
+  assignNodeToGroup,
+  db,
+} from "../background/db";
 import { BranchTree } from "./BranchTree";
 import { BentoGridView } from "./BentoGridView";
 import { MergeModal } from "./MergeModal";
@@ -15,24 +24,35 @@ import {
   FileText,
   LayoutGrid,
   Network,
+  FolderPlus,
+  X,
+  Plus,
 } from "lucide-react";
 
 export const App: React.FC = () => {
   const [nodes, setNodes] = useState<BranchNode[]>([]);
+  const [groups, setGroups] = useState<BranchGroup[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"tree" | "bento">("bento");
   const [activeChatUrl, setActiveChatUrl] = useState<string | null>(null);
   const [selectedMergeNode, setSelectedMergeNode] = useState<BranchNode | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  const loadNodes = useCallback(async () => {
+  const loadData = useCallback(async () => {
     try {
-      const all = await getAllNodes();
-      setNodes(all);
+      const [allNodes, allGroups] = await Promise.all([
+        getAllNodes(),
+        getAllGroups(),
+      ]);
+      setNodes(allNodes);
+      setGroups(allGroups);
     } catch (err) {
-      console.error("[Forkline Sidepanel] Failed to load nodes:", err);
+      console.error("[Forkline Sidepanel] Failed to load data:", err);
     }
   }, []);
 
@@ -48,18 +68,18 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    loadNodes();
+    loadData();
     checkActiveTab();
 
     const onTabActivated = () => checkActiveTab();
     chrome.tabs.onActivated?.addListener(onTabActivated);
-    const interval = setInterval(loadNodes, 2500);
+    const interval = setInterval(loadData, 2500);
 
     return () => {
       chrome.tabs.onActivated?.removeListener(onTabActivated);
       clearInterval(interval);
     };
-  }, [loadNodes, checkActiveTab]);
+  }, [loadData, checkActiveTab]);
 
   const handleSelectNode = async (node: BranchNode) => {
     if (!node.chat?.url) return;
@@ -80,18 +100,39 @@ export const App: React.FC = () => {
   const handleDeleteNode = async (nodeId: string) => {
     if (confirm("Delete this branch?")) {
       await deleteNode(nodeId);
-      await loadNodes();
+      await loadData();
     }
   };
 
-  // Dragging a connection line between branches to re-parent/link them!
   const handleLinkNodes = async (sourceId: string, targetId: string) => {
     const targetNode = await db.nodes.get(targetId);
     if (targetNode) {
       targetNode.parentId = sourceId;
       await saveNode(targetNode);
-      await loadNodes();
+      await loadData();
     }
+  };
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return;
+    await createGroup(newGroupName.trim());
+    setNewGroupName("");
+    setIsCreateGroupOpen(false);
+    await loadData();
+  };
+
+  const handleDeleteGroup = async (groupId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm("Delete this group? Branches inside will become ungrouped.")) {
+      await deleteGroup(groupId);
+      if (selectedGroupId === groupId) setSelectedGroupId("all");
+      await loadData();
+    }
+  };
+
+  const handleAssignGroup = async (nodeId: string, groupId: string | null) => {
+    await assignNodeToGroup(nodeId, groupId);
+    await loadData();
   };
 
   const handleStartMerge = (node: BranchNode) => {
@@ -116,11 +157,11 @@ export const App: React.FC = () => {
       }
     }
 
-    await loadNodes();
+    await loadData();
   };
 
   const handleExportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ nodes, groups }, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
     downloadAnchor.setAttribute("download", `forkline-${new Date().toISOString().slice(0, 10)}.json`);
@@ -133,8 +174,10 @@ export const App: React.FC = () => {
   const handleExportMarkdown = () => {
     let md = `# Forkline Branches\n*Exported ${new Date().toLocaleString()}*\n\n`;
     for (const node of nodes) {
+      const grp = groups.find((g) => g.id === node.groupId)?.name;
       md += `## ${node.label}\n`;
       md += `- **Site**: ${node.chat?.site || "unknown"}\n`;
+      if (grp) md += `- **Group**: ${grp}\n`;
       md += `- **Created**: ${new Date(node.createdAt).toLocaleString()}\n`;
       md += `- **Tokens**: ~${node.tokenEstimate.toLocaleString()}\n`;
       if (node.chat?.url) md += `- **URL**: [Open Chat](${node.chat.url})\n`;
@@ -220,9 +263,8 @@ export const App: React.FC = () => {
             </div>
           </div>
 
-          {/* Action icons */}
+          {/* Action icons & View Switcher */}
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            {/* View Mode Toggle Button */}
             <div
               style={{
                 display: "flex",
@@ -278,7 +320,7 @@ export const App: React.FC = () => {
             </div>
 
             <button
-              onClick={loadNodes}
+              onClick={loadData}
               title="Refresh"
               style={{
                 background: "transparent",
@@ -403,7 +445,7 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Bento Quick Metrics Bar */}
+        {/* Bento Metrics Bar */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
           <div
             style={{
@@ -439,7 +481,7 @@ export const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Bento Search & Platform Filter Row */}
+      {/* Bento Search, Groups & Platform Filters */}
       <div
         style={{
           padding: "8px 12px",
@@ -480,17 +522,104 @@ export const App: React.FC = () => {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#71717a",
-                fontSize: "12px",
-                cursor: "pointer",
-              }}
+              style={{ background: "none", border: "none", color: "#71717a", fontSize: "12px", cursor: "pointer" }}
             >
               &times;
             </button>
           )}
+        </div>
+
+        {/* Groups Filter Row */}
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", overflowX: "auto", paddingBottom: "2px" }}>
+          <button
+            onClick={() => setIsCreateGroupOpen(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+              background: "#18181b",
+              color: "#fafafa",
+              border: "1px solid #27272a",
+              borderRadius: "4px",
+              padding: "3px 7px",
+              fontSize: "10px",
+              fontWeight: "600",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <FolderPlus size={11} />
+            <span>+ Group</span>
+          </button>
+
+          <button
+            onClick={() => setSelectedGroupId("all")}
+            style={{
+              background: selectedGroupId === "all" ? "#ffffff" : "#09090b",
+              color: selectedGroupId === "all" ? "#000000" : "#a1a1aa",
+              border: "1px solid #27272a",
+              borderRadius: "4px",
+              padding: "3px 8px",
+              fontSize: "10px",
+              fontWeight: "600",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            All
+          </button>
+
+          <button
+            onClick={() => setSelectedGroupId("ungrouped")}
+            style={{
+              background: selectedGroupId === "ungrouped" ? "#ffffff" : "#09090b",
+              color: selectedGroupId === "ungrouped" ? "#000000" : "#a1a1aa",
+              border: "1px solid #27272a",
+              borderRadius: "4px",
+              padding: "3px 8px",
+              fontSize: "10px",
+              fontWeight: "600",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            Ungrouped
+          </button>
+
+          {groups.map((g) => (
+            <div
+              key={g.id}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                background: selectedGroupId === g.id ? "#ffffff" : "#09090b",
+                color: selectedGroupId === g.id ? "#000000" : "#a1a1aa",
+                border: "1px solid #27272a",
+                borderRadius: "4px",
+                padding: "2px 6px",
+                fontSize: "10px",
+                fontWeight: "600",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
+              }}
+              onClick={() => setSelectedGroupId(g.id)}
+            >
+              <span>{g.name}</span>
+              <button
+                onClick={(e) => handleDeleteGroup(g.id, e)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: selectedGroupId === g.id ? "#000000" : "#71717a",
+                  cursor: "pointer",
+                  padding: "0 0 0 4px",
+                  fontSize: "10px",
+                }}
+              >
+                &times;
+              </button>
+            </div>
+          ))}
         </div>
 
         {/* Platform filter pills */}
@@ -510,7 +639,6 @@ export const App: React.FC = () => {
                 textTransform: "uppercase",
                 fontFamily: "monospace",
                 cursor: "pointer",
-                transition: "all 0.15s ease",
               }}
             >
               {p}
@@ -519,17 +647,20 @@ export const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Content Area: Bento Grid or Visual Tree */}
+      {/* Main Content Area */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {viewMode === "bento" ? (
           <BentoGridView
             nodes={nodes}
+            groups={groups}
             activeChatUrl={activeChatUrl}
             searchQuery={searchQuery}
             selectedPlatform={selectedPlatform}
+            selectedGroupId={selectedGroupId}
             onSelectNode={handleSelectNode}
             onMergeNode={handleStartMerge}
             onDeleteNode={handleDeleteNode}
+            onAssignGroup={handleAssignGroup}
           />
         ) : (
           <BranchTree
@@ -544,7 +675,100 @@ export const App: React.FC = () => {
         )}
       </div>
 
-      {/* Modals */}
+      {/* Create Group Modal */}
+      {isCreateGroupOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            backgroundColor: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "#09090b",
+              border: "1px solid #27272a",
+              borderRadius: "10px",
+              width: "100%",
+              maxWidth: "340px",
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "14px", fontWeight: "600" }}>New Branch Group</span>
+              <button
+                onClick={() => setIsCreateGroupOpen(false)}
+                style={{ background: "none", border: "none", color: "#71717a", cursor: "pointer" }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. Backend, Research, Client Work..."
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateGroup()}
+              autoFocus
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
+                borderRadius: "6px",
+                padding: "8px 10px",
+                color: "#fafafa",
+                fontSize: "13px",
+                outline: "none",
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+              <button
+                onClick={() => setIsCreateGroupOpen(false)}
+                style={{
+                  background: "transparent",
+                  color: "#a1a1aa",
+                  border: "1px solid #27272a",
+                  borderRadius: "6px",
+                  padding: "6px 12px",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateGroup}
+                style={{
+                  background: "#ffffff",
+                  color: "#000000",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                }}
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {selectedMergeNode && (
         <MergeModal
           branchNode={selectedMergeNode}
@@ -557,7 +781,7 @@ export const App: React.FC = () => {
       {isSettingsOpen && (
         <SettingsModal
           onClose={() => setIsSettingsOpen(false)}
-          onDataReset={loadNodes}
+          onDataReset={loadData}
         />
       )}
     </div>

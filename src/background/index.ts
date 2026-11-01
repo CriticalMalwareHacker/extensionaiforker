@@ -2,19 +2,20 @@ import {
   handleForkRequest,
   getPendingPayload,
   reportChatUrl,
-  findNodeForTab,
 } from "./forkService";
 import {
   getAllNodes,
   saveNode,
   deleteNode,
   getSettings,
-  saveSetting,
+  getAllGroups,
+  createGroup,
+  deleteGroup,
+  assignNodeToGroup,
 } from "./db";
 import { ExtensionMessage } from "../shared/types";
 import { nanoAvailable, nameBranchNano, summarizeNano } from "../ai/nano";
 import { summarizeRemote, nameBranchRemote } from "../ai/remote";
-import { buildMergeInsertText } from "../core/merge";
 
 // Configure side panel to open on action click
 if (chrome.sidePanel?.setPanelBehavior) {
@@ -70,6 +71,30 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
           break;
         }
 
+        case "GET_ALL_GROUPS": {
+          const groups = await getAllGroups();
+          sendResponse({ type: "GET_ALL_GROUPS_RESPONSE", groups });
+          break;
+        }
+
+        case "CREATE_GROUP": {
+          const group = await createGroup(message.name);
+          sendResponse({ success: true, group });
+          break;
+        }
+
+        case "DELETE_GROUP": {
+          await deleteGroup(message.groupId);
+          sendResponse({ success: true });
+          break;
+        }
+
+        case "ASSIGN_GROUP": {
+          await assignNodeToGroup(message.nodeId, message.groupId);
+          sendResponse({ success: true });
+          break;
+        }
+
         case "SUMMARIZE_REQUEST": {
           const settings = await getSettings();
           let summary: string | null = null;
@@ -116,13 +141,12 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
     }
   })();
 
-  return true; // Keep message channel open for async response
+  return true;
 });
 
 // Watch tab updates to detect when a pending fork gets its real conversation URL
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   if (changeInfo.url) {
-    // Notify tab content script of URL change if needed
     try {
       chrome.tabs.sendMessage(tabId, {
         type: "TAB_URL_UPDATED",
@@ -131,4 +155,3 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     } catch {}
   }
 });
-

@@ -1,15 +1,23 @@
 import Dexie, { Table } from "dexie";
-import { BranchNode, ForklineSettings } from "../shared/types";
+import { BranchNode, BranchGroup, ForklineSettings } from "../shared/types";
 import { DEFAULT_PRIMER_TEMPLATE } from "../core/primer";
 
 export class ForklineDatabase extends Dexie {
   nodes!: Table<BranchNode, string>;
+  groups!: Table<BranchGroup, string>;
   settings!: Table<{ key: string; value: any }, string>;
 
   constructor() {
     super("ForklineDB");
     this.version(1).stores({
       nodes: "id, parentId, createdAt, label, [chat.site+chat.conversationId]",
+      settings: "key",
+    });
+
+    // Version 2: add groups and groupId index on nodes
+    this.version(2).stores({
+      nodes: "id, parentId, groupId, createdAt, label, [chat.site+chat.conversationId]",
+      groups: "id, name, createdAt",
       settings: "key",
     });
   }
@@ -61,13 +69,41 @@ export async function saveNode(node: BranchNode): Promise<void> {
 
 export async function deleteNode(id: string): Promise<void> {
   await db.transaction("rw", db.nodes, async () => {
-    // Also re-link or orphan child nodes
     const children = await db.nodes.where("parentId").equals(id).toArray();
     for (const child of children) {
       await db.nodes.update(child.id, { parentId: null });
     }
     await db.nodes.delete(id);
   });
+}
+
+export async function getAllGroups(): Promise<BranchGroup[]> {
+  return await db.groups.orderBy("createdAt").toArray();
+}
+
+export async function createGroup(name: string): Promise<BranchGroup> {
+  const group: BranchGroup = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    createdAt: Date.now(),
+  };
+  await db.groups.put(group);
+  return group;
+}
+
+export async function deleteGroup(groupId: string): Promise<void> {
+  await db.transaction("rw", db.groups, db.nodes, async () => {
+    await db.groups.delete(groupId);
+    // Unassign nodes from this group
+    const assignedNodes = await db.nodes.where("groupId").equals(groupId).toArray();
+    for (const node of assignedNodes) {
+      await db.nodes.update(node.id, { groupId: null });
+    }
+  });
+}
+
+export async function assignNodeToGroup(nodeId: string, groupId: string | null): Promise<void> {
+  await db.nodes.update(nodeId, { groupId });
 }
 
 export async function findNodeByChat(
@@ -78,4 +114,3 @@ export async function findNodeByChat(
     .filter((n) => n.chat?.site === site && n.chat?.conversationId === conversationId)
     .first();
 }
-

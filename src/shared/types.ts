@@ -8,30 +8,37 @@ export interface CodeBlock {
 export interface Message {
   index: number;
   role: "user" | "assistant";
-  text: string;               // plain text or markdown
+  text: string;
   codeBlocks?: CodeBlock[];
-  hasAttachments?: boolean;   // true if we saw files or images we cannot copy
+  hasAttachments?: boolean;
 }
 
 export interface ChatRef {
   site: Site;
-  conversationId: string;     // from the URL
+  conversationId: string;
   url: string;
   title?: string;
 }
 
+export interface BranchGroup {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
 export interface BranchNode {
-  id: string;                 // uuid
+  id: string;
   parentId: string | null;
-  chat: ChatRef | null;       // null until the new chat gets its URL
+  groupId?: string | null;
+  chat: ChatRef | null;
   forkedAtIndex: number | null;
-  label: string;              // auto or user supplied
+  label: string;
   tags: string[];
   tokenEstimate: number;
   compaction: "none" | "summary";
-  excludedIndexes: number[];  // messages the user unchecked
+  excludedIndexes: number[];
   createdAt: number;
-  summary?: string;           // summary if compacted or merged
+  summary?: string;
   isMerged?: boolean;
   mergedAt?: number;
 }
@@ -40,7 +47,7 @@ export interface ForkPayload {
   nodeId: string;
   targetSite: Site;
   primer: string;
-  contextText: string;        // final text to insert
+  contextText: string;
   autoSend?: boolean;
 }
 
@@ -52,6 +59,7 @@ export interface ForkOptions {
   excludedIndexes?: number[];
   compaction?: "none" | "summary";
   parentNodeId?: string | null;
+  groupId?: string | null;
   sourceChat?: ChatRef | null;
   label?: string;
   primerTemplate?: string;
@@ -66,7 +74,6 @@ export interface ForklineSettings {
   cloudProxyToken?: string;
 }
 
-// Background <-> Content / SidePanel communication protocol
 export type ExtensionMessage =
   | { type: "FORK_REQUEST"; payload: ForkOptions }
   | { type: "GET_PENDING_PAYLOAD"; tabId?: number }
@@ -76,6 +83,11 @@ export type ExtensionMessage =
   | { type: "GET_ALL_NODES_RESPONSE"; nodes: BranchNode[] }
   | { type: "SAVE_NODE"; node: BranchNode }
   | { type: "DELETE_NODE"; nodeId: string }
+  | { type: "GET_ALL_GROUPS" }
+  | { type: "GET_ALL_GROUPS_RESPONSE"; groups: BranchGroup[] }
+  | { type: "CREATE_GROUP"; name: string }
+  | { type: "DELETE_GROUP"; groupId: string }
+  | { type: "ASSIGN_GROUP"; nodeId: string; groupId: string | null }
   | { type: "GET_ACTIVE_SITE_STATUS" }
   | { type: "TRIGGER_SELECTIVE_FORK"; messageIndex: number }
   | { type: "SHOW_TOAST"; message: string; durationMs?: number }
@@ -83,4 +95,3 @@ export type ExtensionMessage =
   | { type: "SUMMARIZE_RESPONSE"; summary: string; error?: string }
   | { type: "AUTO_NAME_REQUEST"; contextText: string }
   | { type: "AUTO_NAME_RESPONSE"; title: string; error?: string };
-

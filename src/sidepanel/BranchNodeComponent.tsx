@@ -20,24 +20,32 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
   return (
     <div
       style={{
-        backgroundColor: "#09090b", // shadcn zinc-950
-        border: isCurrentTab ? "1px solid #ffffff" : "1px solid #27272a", // zinc-800
-        borderRadius: "8px",
+        backgroundColor: "#09090b",
+        border: isCurrentTab ? "2px solid #ffffff" : "1px solid #27272a",
+        borderRadius: "10px",
         padding: "12px 14px",
-        width: "230px",
+        width: "250px",
         boxShadow: isCurrentTab
-          ? "0 0 0 1px #ffffff, 0 8px 20px -4px rgba(0, 0, 0, 0.8)"
-          : "0 4px 12px -2px rgba(0, 0, 0, 0.6)",
+          ? "0 0 0 1px #ffffff, 0 10px 25px -5px rgba(0, 0, 0, 0.9)"
+          : "0 4px 15px -2px rgba(0, 0, 0, 0.7)",
         color: "#fafafa",
         fontFamily: "'Inter', sans-serif",
         position: "relative",
-        transition: "all 0.15s ease",
+        userSelect: "none",
+        cursor: "grab",
       }}
     >
+      {/* Target handle at top: connect incoming branch */}
       <Handle
         type="target"
         position={Position.Top}
-        style={{ background: "#71717a", width: 7, height: 7, border: "none" }}
+        style={{
+          background: "#fafafa",
+          width: 9,
+          height: 9,
+          border: "2px solid #09090b",
+          top: -5,
+        }}
       />
 
       {/* Top Header Row */}
@@ -51,14 +59,14 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
       >
         <span
           style={{
-            backgroundColor: "#18181b", // zinc-900
-            color: "#a1a1aa", // zinc-400
+            backgroundColor: "#18181b",
+            color: "#d4d4d8",
             border: "1px solid #27272a",
             fontSize: "10px",
             fontWeight: "600",
             fontFamily: "monospace",
             textTransform: "uppercase",
-            padding: "2px 6px",
+            padding: "2px 7px",
             borderRadius: "4px",
             letterSpacing: "0.5px",
           }}
@@ -74,7 +82,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
                 color: "#fafafa",
                 border: "1px solid #3f3f46",
                 borderRadius: "3px",
-                padding: "1px 3px",
+                padding: "2px 4px",
                 display: "inline-flex",
                 alignItems: "center",
               }}
@@ -89,7 +97,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
                 color: "#a1a1aa",
                 border: "1px solid #27272a",
                 borderRadius: "3px",
-                padding: "1px 3px",
+                padding: "2px 4px",
                 display: "inline-flex",
                 alignItems: "center",
               }}
@@ -97,7 +105,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               <Cpu size={11} />
             </span>
           )}
-          <span style={{ fontSize: "11px", color: "#71717a", fontWeight: "400" }}>
+          <span style={{ fontSize: "11px", color: "#71717a", fontWeight: "500" }}>
             ~{node.tokenEstimate.toLocaleString()} tkn
           </span>
         </div>
@@ -106,11 +114,11 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
       {/* Branch Label */}
       <div
         style={{
-          fontSize: "12px",
-          fontWeight: "500",
-          color: "#f4f4f5",
+          fontSize: "13px",
+          fontWeight: "600",
+          color: "#fafafa",
           lineHeight: "1.4",
-          marginBottom: "10px",
+          marginBottom: "12px",
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
@@ -121,8 +129,9 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         {node.label}
       </div>
 
-      {/* Action Footer */}
+      {/* Action Footer (nodrag so buttons can be clicked!) */}
       <div
+        className="nodrag nopan"
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -131,18 +140,21 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
           borderTop: "1px solid #18181b",
         }}
       >
-        {/* Open Button (shadcn primary button) */}
         <button
-          onClick={() => onSelect(node)}
+          className="nodrag nopan"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(node);
+          }}
           style={{
             display: "inline-flex",
             alignItems: "center",
-            gap: "4px",
+            gap: "5px",
             background: "#ffffff",
             color: "#000000",
             border: "none",
-            borderRadius: "5px",
-            padding: "4px 8px",
+            borderRadius: "6px",
+            padding: "5px 10px",
             fontSize: "11px",
             fontWeight: "600",
             cursor: "pointer",
@@ -150,25 +162,28 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
           }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.opacity = "0.9")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.opacity = "1")}
-          title={node.chat?.url ? "Switch to or open chat" : "URL not attached yet"}
         >
-          <ExternalLink size={11} />
-          {node.chat?.url ? "Open" : "Pending"}
+          <ExternalLink size={12} />
+          {node.chat?.url ? "Open" : "Open"}
         </button>
 
-        <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
-          {node.parentId && !node.isMerged && (
+        <div className="nodrag nopan" style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          {!node.isMerged && (
             <button
-              onClick={() => onMerge(node)}
+              className="nodrag nopan"
+              onClick={(e) => {
+                e.stopPropagation();
+                onMerge(node);
+              }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "3px",
+                gap: "4px",
                 background: "#18181b",
-                color: "#e4e4e7",
+                color: "#f4f4f5",
                 border: "1px solid #27272a",
-                borderRadius: "5px",
-                padding: "4px 7px",
+                borderRadius: "6px",
+                padding: "5px 8px",
                 fontSize: "11px",
                 fontWeight: "500",
                 cursor: "pointer",
@@ -176,29 +191,39 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
               }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#27272a")}
               onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-              title="Merge summary back into parent chat"
+              title="Merge summary into parent conversation"
             >
-              <GitMerge size={11} />
+              <GitMerge size={12} />
               Merge
             </button>
           )}
 
           <button
-            onClick={() => onDelete(node.id)}
+            className="nodrag nopan"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(node.id);
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
               background: "transparent",
               color: "#71717a",
-              border: "none",
-              borderRadius: "4px",
-              padding: "4px",
+              border: "1px solid #27272a",
+              borderRadius: "6px",
+              padding: "5px 7px",
               cursor: "pointer",
-              transition: "color 0.15s ease",
+              transition: "all 0.15s ease",
             }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#ef4444")}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#71717a")}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#ffffff";
+              (e.currentTarget as HTMLElement).style.borderColor = "#71717a";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.color = "#71717a";
+              (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
+            }}
             title="Delete this branch"
           >
             <Trash2 size={12} />
@@ -206,10 +231,17 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         </div>
       </div>
 
+      {/* Source handle at bottom: drag to connect to another branch */}
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ background: "#71717a", width: 7, height: 7, border: "none" }}
+        style={{
+          background: "#fafafa",
+          width: 9,
+          height: 9,
+          border: "2px solid #09090b",
+          bottom: -5,
+        }}
       />
     </div>
   );

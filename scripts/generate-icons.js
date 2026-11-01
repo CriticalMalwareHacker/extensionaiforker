@@ -3,14 +3,10 @@ import path from "path";
 import zlib from "zlib";
 
 function createPNG(size, bgHex, fgHex) {
-  // Simple uncompressed / deflate PNG generator
   const width = size;
   const height = size;
-
-  // RGBA buffer
   const rgba = Buffer.alloc(width * height * 4);
 
-  // Parse colors
   const parseHex = (hex) => [
     parseInt(hex.slice(1, 3), 16),
     parseInt(hex.slice(3, 5), 16),
@@ -51,7 +47,6 @@ function createPNG(size, bgHex, fgHex) {
           rgba[idx + 3] = 255;
         }
       } else {
-        // Transparent
         rgba[idx] = 0;
         rgba[idx + 1] = 0;
         rgba[idx + 2] = 0;
@@ -60,27 +55,23 @@ function createPNG(size, bgHex, fgHex) {
     }
   }
 
-  // Build IDAT scanlines
   const scanlines = Buffer.alloc(height * (width * 4 + 1));
   for (let y = 0; y < height; y++) {
-    scanlines[y * (width * 4 + 1)] = 0; // Filter None
+    scanlines[y * (width * 4 + 1)] = 0;
     rgba.copy(scanlines, y * (width * 4 + 1) + 1, y * width * 4, (y + 1) * width * 4);
   }
 
   const compressed = zlib.deflateSync(scanlines);
-
-  // PNG Header
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
-  // IHDR chunk
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 6; // RGBA
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
 
   const makeChunk = (type, data) => {
     const len = Buffer.alloc(4);
@@ -92,7 +83,6 @@ function createPNG(size, bgHex, fgHex) {
     return Buffer.concat([len, body, crc]);
   };
 
-  // CRC-32 table
   function crc32(buf) {
     let crc = 0xffffffff;
     for (let i = 0; i < buf.length; i++) {
@@ -116,9 +106,9 @@ function createPNG(size, bgHex, fgHex) {
 const iconsDir = path.resolve("public/icons");
 fs.mkdirSync(iconsDir, { recursive: true });
 
+// Pure monochrome Black (#000000) and White (#ffffff)
 for (const size of [16, 48, 128]) {
-  const png = createPNG(size, "#0284c7", "#38bdf8");
+  const png = createPNG(size, "#09090b", "#fafafa");
   fs.writeFileSync(path.join(iconsDir, `icon-${size}.png`), png);
-  console.log(`Generated icon-${size}.png`);
+  console.log(`Generated monochrome icon-${size}.png`);
 }
-

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { BranchNode } from "../shared/types";
-import { getAllNodes, deleteNode, saveNode } from "../background/db";
+import { getAllNodes, deleteNode, saveNode, db } from "../background/db";
 import { BranchTree } from "./BranchTree";
+import { BentoGridView } from "./BentoGridView";
 import { MergeModal } from "./MergeModal";
 import { SettingsModal } from "./SettingsModal";
 import {
@@ -12,11 +13,15 @@ import {
   RefreshCw,
   FileJson,
   FileText,
+  LayoutGrid,
+  Network,
 } from "lucide-react";
 
 export const App: React.FC = () => {
   const [nodes, setNodes] = useState<BranchNode[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"tree" | "bento">("bento");
   const [activeChatUrl, setActiveChatUrl] = useState<string | null>(null);
   const [selectedMergeNode, setSelectedMergeNode] = useState<BranchNode | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -48,7 +53,7 @@ export const App: React.FC = () => {
 
     const onTabActivated = () => checkActiveTab();
     chrome.tabs.onActivated?.addListener(onTabActivated);
-    const interval = setInterval(loadNodes, 3000);
+    const interval = setInterval(loadNodes, 2500);
 
     return () => {
       chrome.tabs.onActivated?.removeListener(onTabActivated);
@@ -75,6 +80,16 @@ export const App: React.FC = () => {
   const handleDeleteNode = async (nodeId: string) => {
     if (confirm("Delete this branch?")) {
       await deleteNode(nodeId);
+      await loadNodes();
+    }
+  };
+
+  // Dragging a connection line between branches to re-parent/link them!
+  const handleLinkNodes = async (sourceId: string, targetId: string) => {
+    const targetNode = await db.nodes.get(targetId);
+    if (targetNode) {
+      targetNode.parentId = sourceId;
+      await saveNode(targetNode);
       await loadNodes();
     }
   };
@@ -137,6 +152,8 @@ export const App: React.FC = () => {
     setExportMenuOpen(false);
   };
 
+  const totalTokens = nodes.reduce((acc, curr) => acc + (curr.tokenEstimate || 0), 0);
+
   const parentOfSelected = selectedMergeNode?.parentId
     ? nodes.find((n) => n.id === selectedMergeNode.parentId) || null
     : null;
@@ -150,75 +167,119 @@ export const App: React.FC = () => {
         backgroundColor: "#000000",
         color: "#fafafa",
         fontFamily: "'Inter', sans-serif",
+        overflow: "hidden",
       }}
     >
-      {/* Top Bar */}
+      {/* Top Bento Header Bar */}
       <div
         style={{
-          padding: "10px 14px",
+          padding: "12px 14px",
           borderBottom: "1px solid #18181b",
           backgroundColor: "#000000",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
+          flexDirection: "column",
           gap: "10px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "6px",
-              backgroundColor: "#18181b",
-              border: "1px solid #27272a",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fafafa",
-            }}
-          >
-            <GitBranch size={13} />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          {/* Brand */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div
+              style={{
+                width: "26px",
+                height: "26px",
+                borderRadius: "6px",
+                backgroundColor: "#09090b",
+                border: "1px solid #27272a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fafafa",
+              }}
+            >
+              <GitBranch size={14} />
+            </div>
+            <div>
+              <span style={{ fontSize: "14px", fontWeight: "700", letterSpacing: "-0.2px" }}>
+                Forkline
+              </span>
+              <span
+                style={{
+                  marginLeft: "6px",
+                  fontSize: "9px",
+                  fontFamily: "monospace",
+                  color: "#71717a",
+                  backgroundColor: "#18181b",
+                  border: "1px solid #27272a",
+                  padding: "1px 5px",
+                  borderRadius: "3px",
+                }}
+              >
+                v0.1
+              </span>
+            </div>
           </div>
-          <span style={{ fontSize: "13px", fontWeight: "600", letterSpacing: "-0.2px" }}>
-            Forkline
-          </span>
-        </div>
 
-        {/* Action icons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          <button
-            onClick={loadNodes}
-            title="Refresh tree"
-            style={{
-              background: "transparent",
-              border: "1px solid #27272a",
-              color: "#a1a1aa",
-              borderRadius: "6px",
-              padding: "5px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "#18181b";
-              (e.currentTarget as HTMLElement).style.color = "#fafafa";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
-            }}
-          >
-            <RefreshCw size={13} />
-          </button>
+          {/* Action icons */}
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {/* View Mode Toggle Button */}
+            <div
+              style={{
+                display: "flex",
+                backgroundColor: "#09090b",
+                border: "1px solid #27272a",
+                borderRadius: "6px",
+                padding: "2px",
+                marginRight: "4px",
+              }}
+            >
+              <button
+                onClick={() => setViewMode("bento")}
+                title="Bento Grid View"
+                style={{
+                  background: viewMode === "bento" ? "#ffffff" : "transparent",
+                  color: viewMode === "bento" ? "#000000" : "#a1a1aa",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "4px 7px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  gap: "4px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <LayoutGrid size={12} />
+                <span>Grid</span>
+              </button>
+              <button
+                onClick={() => setViewMode("tree")}
+                title="Visual Tree Graph"
+                style={{
+                  background: viewMode === "tree" ? "#ffffff" : "transparent",
+                  color: viewMode === "tree" ? "#000000" : "#a1a1aa",
+                  border: "none",
+                  borderRadius: "4px",
+                  padding: "4px 7px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  fontSize: "11px",
+                  fontWeight: "600",
+                  gap: "4px",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Network size={12} />
+                <span>Tree</span>
+              </button>
+            </div>
 
-          {/* Export Dropdown */}
-          <div style={{ position: "relative" }}>
             <button
-              onClick={() => setExportMenuOpen(!exportMenuOpen)}
-              title="Export branches"
+              onClick={loadNodes}
+              title="Refresh"
               style={{
                 background: "transparent",
                 border: "1px solid #27272a",
@@ -229,122 +290,163 @@ export const App: React.FC = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                transition: "all 0.15s ease",
               }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "#18181b";
-                (e.currentTarget as HTMLElement).style.color = "#fafafa";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-                (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
-              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
             >
-              <Download size={13} />
+              <RefreshCw size={13} />
             </button>
 
-            {exportMenuOpen && (
-              <div
+            {/* Export Menu */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                title="Export"
                 style={{
-                  position: "absolute",
-                  right: 0,
-                  top: "100%",
-                  marginTop: "6px",
-                  backgroundColor: "#09090b",
+                  background: "transparent",
                   border: "1px solid #27272a",
+                  color: "#a1a1aa",
                   borderRadius: "6px",
-                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.8)",
-                  zIndex: 200,
-                  minWidth: "150px",
-                  overflow: "hidden",
-                  padding: "4px",
+                  padding: "5px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
               >
-                <button
-                  onClick={handleExportMarkdown}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "7px 10px",
-                    background: "none",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: "#f4f4f5",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "background 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
-                >
-                  <FileText size={13} /> Export Markdown
-                </button>
-                <button
-                  onClick={handleExportJSON}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "7px 10px",
-                    background: "none",
-                    border: "none",
-                    borderRadius: "4px",
-                    color: "#f4f4f5",
-                    fontSize: "12px",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "background 0.15s ease",
-                  }}
-                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
-                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
-                >
-                  <FileJson size={13} /> Export JSON
-                </button>
-              </div>
-            )}
-          </div>
+                <Download size={13} />
+              </button>
 
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            title="Settings"
+              {exportMenuOpen && (
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "100%",
+                    marginTop: "6px",
+                    backgroundColor: "#09090b",
+                    border: "1px solid #27272a",
+                    borderRadius: "6px",
+                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.8)",
+                    zIndex: 200,
+                    minWidth: "150px",
+                    padding: "4px",
+                  }}
+                >
+                  <button
+                    onClick={handleExportMarkdown}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "7px 10px",
+                      background: "none",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: "#f4f4f5",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
+                  >
+                    <FileText size={13} /> Export Markdown
+                  </button>
+                  <button
+                    onClick={handleExportJSON}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "7px 10px",
+                      background: "none",
+                      border: "none",
+                      borderRadius: "4px",
+                      color: "#f4f4f5",
+                      fontSize: "12px",
+                      cursor: "pointer",
+                      textAlign: "left",
+                    }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
+                  >
+                    <FileJson size={13} /> Export JSON
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              title="Settings"
+              style={{
+                background: "transparent",
+                border: "1px solid #27272a",
+                color: "#a1a1aa",
+                borderRadius: "6px",
+                padding: "5px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#fafafa")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#a1a1aa")}
+            >
+              <Settings size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Bento Quick Metrics Bar */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+          <div
             style={{
-              background: "transparent",
+              backgroundColor: "#09090b",
               border: "1px solid #27272a",
-              color: "#a1a1aa",
-              borderRadius: "6px",
-              padding: "5px",
-              cursor: "pointer",
+              borderRadius: "8px",
+              padding: "8px 12px",
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "#18181b";
-              (e.currentTarget as HTMLElement).style.color = "#fafafa";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.background = "transparent";
-              (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
             }}
           >
-            <Settings size={13} />
-          </button>
+            <span style={{ fontSize: "11px", color: "#71717a" }}>Total Branches</span>
+            <span style={{ fontSize: "13px", fontWeight: "700", color: "#fafafa" }}>{nodes.length}</span>
+          </div>
+
+          <div
+            style={{
+              backgroundColor: "#09090b",
+              border: "1px solid #27272a",
+              borderRadius: "8px",
+              padding: "8px 12px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span style={{ fontSize: "11px", color: "#71717a" }}>Est. Tokens</span>
+            <span style={{ fontSize: "13px", fontWeight: "700", color: "#fafafa" }}>
+              ~{totalTokens > 1000 ? `${(totalTokens / 1000).toFixed(1)}k` : totalTokens}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Search Input (shadcn input) */}
+      {/* Bento Search & Platform Filter Row */}
       <div
         style={{
           padding: "8px 12px",
           backgroundColor: "#000000",
           borderBottom: "1px solid #18181b",
           display: "flex",
-          alignItems: "center",
+          flexDirection: "column",
           gap: "8px",
         }}
       >
@@ -357,7 +459,6 @@ export const App: React.FC = () => {
             border: "1px solid #27272a",
             borderRadius: "6px",
             padding: "5px 10px",
-            width: "100%",
           }}
         >
           <Search size={13} color="#71717a" />
@@ -385,44 +486,62 @@ export const App: React.FC = () => {
                 color: "#71717a",
                 fontSize: "12px",
                 cursor: "pointer",
-                padding: "0 2px",
               }}
             >
               &times;
             </button>
           )}
         </div>
+
+        {/* Platform filter pills */}
+        <div style={{ display: "flex", gap: "6px" }}>
+          {["all", "chatgpt", "claude", "gemini"].map((p) => (
+            <button
+              key={p}
+              onClick={() => setSelectedPlatform(p)}
+              style={{
+                background: selectedPlatform === p ? "#ffffff" : "#09090b",
+                color: selectedPlatform === p ? "#000000" : "#a1a1aa",
+                border: "1px solid #27272a",
+                borderRadius: "4px",
+                padding: "3px 8px",
+                fontSize: "10px",
+                fontWeight: "600",
+                textTransform: "uppercase",
+                fontFamily: "monospace",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Visual Branch Tree Area */}
+      {/* Main Content Area: Bento Grid or Visual Tree */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <BranchTree
-          nodes={nodes}
-          activeChatUrl={activeChatUrl}
-          searchQuery={searchQuery}
-          onSelectNode={handleSelectNode}
-          onMergeNode={handleStartMerge}
-          onDeleteNode={handleDeleteNode}
-        />
-      </div>
-
-      {/* Footer Status Bar */}
-      <div
-        style={{
-          padding: "6px 14px",
-          backgroundColor: "#000000",
-          borderTop: "1px solid #18181b",
-          fontSize: "11px",
-          color: "#71717a",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <span>
-          {nodes.length} branch{nodes.length === 1 ? "" : "es"}
-        </span>
-        <span style={{ color: "#a1a1aa" }}>Local IndexedDB</span>
+        {viewMode === "bento" ? (
+          <BentoGridView
+            nodes={nodes}
+            activeChatUrl={activeChatUrl}
+            searchQuery={searchQuery}
+            selectedPlatform={selectedPlatform}
+            onSelectNode={handleSelectNode}
+            onMergeNode={handleStartMerge}
+            onDeleteNode={handleDeleteNode}
+          />
+        ) : (
+          <BranchTree
+            nodes={nodes}
+            activeChatUrl={activeChatUrl}
+            searchQuery={searchQuery}
+            onSelectNode={handleSelectNode}
+            onMergeNode={handleStartMerge}
+            onDeleteNode={handleDeleteNode}
+            onLinkNodes={handleLinkNodes}
+          />
+        )}
       </div>
 
       {/* Modals */}

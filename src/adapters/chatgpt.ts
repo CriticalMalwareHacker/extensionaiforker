@@ -92,41 +92,54 @@ export class ChatGPTAdapter implements SiteAdapter {
   }
 
   getInputElement(): HTMLElement | null {
-    return document.querySelector<HTMLElement>(SELECTORS.inputBox);
+    // 1. ChatGPT contenteditable div (Lexical / ProseMirror)
+    const editable = document.querySelector<HTMLElement>(
+      "div#prompt-textarea[contenteditable='true'], #prompt-textarea [contenteditable='true'], div[contenteditable='true'][role='textbox'], div#prompt-textarea"
+    );
+    if (editable) return editable;
+
+    // 2. Textarea element
+    const textarea = document.querySelector<HTMLElement>(
+      "#prompt-textarea, textarea[data-id='root'], textarea"
+    );
+    return textarea;
   }
 
   insertText(input: HTMLElement, text: string): boolean {
     try {
-      input.focus();
+      const target = (input.querySelector<HTMLElement>("[contenteditable='true']") || input);
+      target.focus();
 
-      // Approach 1: execCommand
+      // Dispatch synthetic paste event (fastest & most reliable for rich text editors)
+      const dt = new DataTransfer();
+      dt.setData("text/plain", text);
+      const pasteEvent = new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: dt,
+      });
+      if (target.dispatchEvent(pasteEvent)) {
+        if ((target.textContent || "").length > 5) {
+          return true;
+        }
+      }
+
+      // Approach 2: execCommand insertText
+      document.execCommand("selectAll", false, null);
       if (document.execCommand("insertText", false, text)) {
         return true;
       }
 
-      // Approach 2: Dispatch synthetic paste event with DataTransfer
-      const dt = new DataTransfer();
-      dt.setData("text/plain", text);
-      const pasteEvent = new ClipboardEvent("paste", {
-        clipboardData: dt,
-        bubbles: true,
-        cancelable: true,
-      });
-      if (input.dispatchEvent(pasteEvent)) {
+      // Approach 3: direct input event
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+        target.value = text;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
         return true;
       }
 
-      // Approach 3: Direct value setting for textarea
-      if (input instanceof HTMLTextAreaElement) {
-        input.value = text;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-        return true;
-      }
-
-      // Approach 4: contenteditable innerText
-      if (input.isContentEditable) {
-        input.innerText = text;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
+      if (target.isContentEditable) {
+        target.innerText = text;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
         return true;
       }
     } catch (err) {

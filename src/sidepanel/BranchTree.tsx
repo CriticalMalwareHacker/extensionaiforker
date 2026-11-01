@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import ReactFlow, {
   Background,
   Controls,
@@ -6,6 +6,10 @@ import ReactFlow, {
   Node,
   ConnectionLineType,
   BackgroundVariant,
+  Connection,
+  useNodesState,
+  useEdgesState,
+  addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { BranchNode } from "../shared/types";
@@ -23,6 +27,7 @@ interface BranchTreeProps {
   onSelectNode: (node: BranchNode) => void;
   onMergeNode: (node: BranchNode) => void;
   onDeleteNode: (nodeId: string) => void;
+  onLinkNodes?: (sourceId: string, targetId: string) => void;
 }
 
 export const BranchTree: React.FC<BranchTreeProps> = ({
@@ -32,6 +37,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
   onSelectNode,
   onMergeNode,
   onDeleteNode,
+  onLinkNodes,
 }) => {
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return nodes;
@@ -44,7 +50,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
     );
   }, [nodes, searchQuery]);
 
-  const { flowNodes, flowEdges } = useMemo(() => {
+  const { initialNodes, initialEdges } = useMemo(() => {
     const nodeMap = new Map(filteredNodes.map((n) => [n.id, n]));
     const childrenMap = new Map<string, string[]>();
 
@@ -65,11 +71,11 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
 
     function layoutSubtree(nodeId: string, depth: number): { minX: number; maxX: number } {
       const children = childrenMap.get(nodeId) || [];
-      const y = depth * 160 + 40;
+      const y = depth * 170 + 40;
 
       if (children.length === 0) {
         const x = currentX;
-        currentX += 270;
+        currentX += 280;
         positions.set(nodeId, { x, y });
         return { minX: x, maxX: x };
       }
@@ -90,10 +96,10 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
 
     for (const root of rootNodes) {
       layoutSubtree(root.id, 0);
-      currentX += 60;
+      currentX += 80;
     }
 
-    const flowNodes: Node[] = filteredNodes.map((n) => {
+    const initialNodes: Node[] = filteredNodes.map((n) => {
       const pos = positions.get(n.id) || { x: 40, y: 40 };
       const isCurrentTab = Boolean(
         activeChatUrl && n.chat?.url && activeChatUrl.includes(n.chat.conversationId)
@@ -103,6 +109,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         id: n.id,
         type: "branchNode",
         position: pos,
+        draggable: true,
         data: {
           node: n,
           isCurrentTab,
@@ -113,25 +120,54 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
       };
     });
 
-    const flowEdges: Edge[] = [];
+    const initialEdges: Edge[] = [];
     for (const node of filteredNodes) {
       if (node.parentId && nodeMap.has(node.parentId)) {
-        flowEdges.push({
+        initialEdges.push({
           id: `e-${node.parentId}-${node.id}`,
           source: node.parentId,
           target: node.id,
           type: ConnectionLineType.SmoothStep,
           animated: node.isMerged,
           style: {
-            stroke: node.isMerged ? "#ffffff" : "#3f3f46",
-            strokeWidth: node.isMerged ? 1.5 : 1.2,
+            stroke: node.isMerged ? "#ffffff" : "#71717a",
+            strokeWidth: node.isMerged ? 2 : 1.5,
           },
         });
       }
     }
 
-    return { flowNodes, flowEdges };
+    return { initialNodes, initialEdges };
   }, [filteredNodes, activeChatUrl, onSelectNode, onMergeNode, onDeleteNode]);
+
+  const [flowNodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [flowEdges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Update nodes and edges when data changes
+  React.useEffect(() => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  // Handle user dragging a connection line between branches to link them!
+  const handleConnect = useCallback(
+    (params: Connection) => {
+      if (params.source && params.target) {
+        setEdges((eds) =>
+          addEdge(
+            {
+              ...params,
+              type: ConnectionLineType.SmoothStep,
+              style: { stroke: "#fafafa", strokeWidth: 1.5 },
+            },
+            eds
+          )
+        );
+        onLinkNodes?.(params.source, params.target);
+      }
+    },
+    [setEdges, onLinkNodes]
+  );
 
   if (filteredNodes.length === 0) {
     return (
@@ -150,9 +186,9 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
       >
         <div
           style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
+            width: "44px",
+            height: "44px",
+            borderRadius: "8px",
             border: "1px solid #27272a",
             backgroundColor: "#09090b",
             display: "flex",
@@ -162,7 +198,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
             color: "#fafafa",
           }}
         >
-          <GitBranch size={18} />
+          <GitBranch size={20} />
         </div>
         <div
           style={{
@@ -195,9 +231,13 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         nodes={flowNodes}
         edges={flowEdges}
         nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={handleConnect}
         fitView
         minZoom={0.2}
         maxZoom={1.5}
+        proOptions={{ hideAttribution: true }}
       >
         <Background
           variant={BackgroundVariant.Dots}
@@ -210,7 +250,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
             background: "#09090b",
             border: "1px solid #27272a",
             borderRadius: "6px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.7)",
           }}
         />
       </ReactFlow>

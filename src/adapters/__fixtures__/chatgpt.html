@@ -1,0 +1,31 @@
+<div class="conversation-container">
+  <article data-testid="conversation-turn-1">
+    <div data-message-author-role="user">
+      <p>Hello! Can you write a TypeScript function to debounce an operation?</p>
+    </div>
+  </article>
+
+  <article data-testid="conversation-turn-2">
+    <div data-message-author-role="assistant">
+      <p>Certainly! Here is a clean TypeScript implementation of debounce:</p>
+      <pre><code class="language-typescript">export function debounce&lt;T extends (...args: any[]) =&gt; any&gt;(
+  fn: T,
+  delay: number
+): (...args: Parameters&lt;T&gt;) =&gt; void {
+  let timer: any;
+  return (...args: Parameters&lt;T&gt;) =&gt; {
+    clearTimeout(timer);
+    timer = setTimeout(() =&gt; fn(...args), delay);
+  };
+}</code></pre>
+      <p>Let me know if you would like me to add cancel support.</p>
+    </div>
+  </article>
+
+  <article data-testid="conversation-turn-3">
+    <div data-message-author-role="user">
+      <p>Yes please, and also add immediate execution.</p>
+      <img alt="Uploaded screenshot diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=" />
+    </div>
+  </article>
+</div>

@@ -1,0 +1,14 @@
+<div class="chat-history">
+  <user-query>
+    <div class="query-text">Explain how Chrome Extension Manifest V3 service workers work.</div>
+  </user-query>
+
+  <model-response>
+    <div class="response-text">
+      In Manifest V3, background pages are replaced with service workers which are event-based and terminate when idle.
+      <pre><code class="language-typescript">chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  return true;
+});</code></pre>
+    </div>
+  </model-response>
+</div>

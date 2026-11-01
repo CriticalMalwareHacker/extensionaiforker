@@ -1,0 +1,22 @@
+<div data-testid="chat-scroll-container">
+  <div data-testid="user-message" class="font-user-message">
+    <div>How do I implement a LRU Cache in JavaScript?</div>
+  </div>
+
+  <div class="font-claude-message">
+    <div>Here is a standard LRU Cache using Map:</div>
+    <pre><code class="language-javascript">class LRUCache {
+  constructor(capacity) {
+    this.capacity = capacity;
+    this.cache = new Map();
+  }
+  get(key) {
+    if (!this.cache.has(key)) return -1;
+    const v = this.cache.get(key);
+    this.cache.delete(key);
+    this.cache.set(key, v);
+    return v;
+  }
+}</code></pre>
+  </div>
+</div>

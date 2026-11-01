@@ -121,3 +121,4 @@ for (const size of [16, 48, 128]) {
   fs.writeFileSync(path.join(iconsDir, `icon-${size}.png`), png);
   console.log(`Generated icon-${size}.png`);
 }
+

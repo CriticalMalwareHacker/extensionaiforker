@@ -12,3 +12,4 @@ export interface SiteAdapter {
   getChatTitle?(): string | null;
   getChatContainer?(): HTMLElement | null;
 }
+

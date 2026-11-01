@@ -26,11 +26,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
     setTimeout(() => {
       setSaved(false);
       onClose();
-    }, 1000);
+    }, 800);
   };
 
   const handleClearAll = async () => {
-    if (confirm("Are you sure you want to delete all branches and reset Forkline? This cannot be undone.")) {
+    if (confirm("Delete all branches and reset local database? This cannot be undone.")) {
       await db.nodes.clear();
       onDataReset();
       onClose();
@@ -45,7 +45,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
         left: 0,
         width: "100%",
         height: "100%",
-        backgroundColor: "rgba(15, 23, 42, 0.8)",
+        backgroundColor: "rgba(0, 0, 0, 0.75)",
         backdropFilter: "blur(4px)",
         display: "flex",
         alignItems: "center",
@@ -56,55 +56,60 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
     >
       <div
         style={{
-          backgroundColor: "#0f172a",
-          border: "1px solid #334155",
-          borderRadius: "12px",
+          backgroundColor: "#09090b",
+          border: "1px solid #27272a",
+          borderRadius: "10px",
           width: "100%",
-          maxWidth: "520px",
+          maxWidth: "480px",
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
-          boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5)",
-          color: "#f8fafc",
-          fontFamily: "system-ui, sans-serif",
+          boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)",
+          color: "#fafafa",
+          fontFamily: "'Inter', sans-serif",
           overflow: "hidden",
         }}
       >
         <div
           style={{
             padding: "14px 18px",
-            borderBottom: "1px solid #334155",
+            borderBottom: "1px solid #18181b",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
           }}
         >
-          <span style={{ fontWeight: "600", fontSize: "15px" }}>Forkline Settings</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}>
-            <X size={18} />
+          <span style={{ fontWeight: "600", fontSize: "14px", letterSpacing: "-0.2px" }}>Settings</span>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", color: "#71717a", cursor: "pointer", padding: "4px" }}
+          >
+            <X size={15} />
           </button>
         </div>
 
         <div style={{ padding: "18px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Default Target */}
+          {/* Target Site */}
           <div>
-            <label style={{ fontSize: "13px", fontWeight: "600", color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
-              Default Target Site:
+            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "6px" }}>
+              Default Target Platform
             </label>
             <select
               value={settings.defaultTargetSite}
               onChange={(e) => setSettings({ ...settings, defaultTargetSite: e.target.value as any })}
               style={{
                 width: "100%",
-                padding: "8px 10px",
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
+                padding: "7px 10px",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
                 borderRadius: "6px",
-                color: "#f1f5f9",
-                fontSize: "13px",
+                color: "#f4f4f5",
+                fontSize: "12px",
+                fontFamily: "inherit",
+                outline: "none",
               }}
             >
-              <option value="same">Same site as source chat</option>
+              <option value="same">Same site as current conversation</option>
               <option value="chatgpt">ChatGPT</option>
               <option value="claude">Claude</option>
               <option value="gemini">Gemini</option>
@@ -113,34 +118,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
 
           {/* Primer template */}
           <div>
-            <label style={{ fontSize: "13px", fontWeight: "600", color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
-              Fork Primer Template:
+            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "4px" }}>
+              Fork Primer Template
             </label>
-            <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "6px" }}>
-              Must include <code>{"{CONTEXT}"}</code> placeholder where prior conversation turns are inserted.
+            <div style={{ fontSize: "11px", color: "#71717a", marginBottom: "6px" }}>
+              Must include <code>{"{CONTEXT}"}</code> placeholder.
             </div>
             <textarea
               value={settings.primerTemplate}
               onChange={(e) => setSettings({ ...settings, primerTemplate: e.target.value })}
-              rows={5}
+              rows={4}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
                 padding: "8px 10px",
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
                 borderRadius: "6px",
-                color: "#f1f5f9",
+                color: "#f4f4f5",
                 fontSize: "11px",
                 fontFamily: "monospace",
+                outline: "none",
               }}
             />
           </div>
 
-          {/* Smart Compaction Turns */}
+          {/* Compaction count */}
           <div>
-            <label style={{ fontSize: "13px", fontWeight: "600", color: "#cbd5e1", display: "block", marginBottom: "6px" }}>
-              Compaction: Keep Recent Turns Verbatim:
+            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "block", marginBottom: "6px" }}>
+              Compaction: Keep Recent Turns Verbatim
             </label>
             <input
               type="number"
@@ -149,95 +155,93 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               value={settings.compactKeepRecent}
               onChange={(e) => setSettings({ ...settings, compactKeepRecent: Number(e.target.value) })}
               style={{
-                width: "80px",
-                padding: "6px 10px",
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
+                width: "70px",
+                padding: "5px 8px",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
                 borderRadius: "6px",
-                color: "#f1f5f9",
-                fontSize: "13px",
+                color: "#f4f4f5",
+                fontSize: "12px",
+                fontFamily: "inherit",
+                outline: "none",
               }}
             />
           </div>
 
-          {/* Gemini Nano Built-in AI */}
-          <div style={{ backgroundColor: "#1e293b", padding: "12px", borderRadius: "8px", border: "1px solid #334155" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+          {/* On-device Gemini Nano */}
+          <div style={{ backgroundColor: "#000000", padding: "12px", borderRadius: "6px", border: "1px solid #18181b" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer" }}>
               <input
                 type="checkbox"
                 checked={settings.useGeminiNano}
                 onChange={(e) => setSettings({ ...settings, useGeminiNano: e.target.checked })}
+                style={{ marginTop: "2px" }}
               />
               <div>
-                <div style={{ fontSize: "13px", fontWeight: "600", color: "#f8fafc", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Cpu size={14} color="#38bdf8" /> Use Chrome Built-in AI (Gemini Nano)
+                <div style={{ fontSize: "12px", fontWeight: "500", color: "#fafafa", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Cpu size={13} /> On-Device AI (Gemini Nano)
                 </div>
-                <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
-                  Runs entirely on-device for instantaneous auto-naming and summarization. 100% private.
+                <div style={{ fontSize: "11px", color: "#71717a", marginTop: "2px" }}>
+                  Uses Chrome built-in Prompt API when available. 100% private and on-device.
                 </div>
               </div>
             </label>
           </div>
 
-          {/* Cloud Run Proxy Fallback */}
+          {/* Cloud Run Fallback */}
           <div>
-            <label style={{ fontSize: "13px", fontWeight: "600", color: "#cbd5e1", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-              <Cloud size={14} color="#a855f7" /> Cloud Run Gemini Proxy (Optional Fallback):
+            <label style={{ fontSize: "12px", fontWeight: "500", color: "#e4e4e7", display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
+              <Cloud size={13} /> Cloud Run Proxy (Optional Fallback)
             </label>
             <input
               type="text"
-              placeholder="https://forkline-proxy-xyz.a.run.app"
+              placeholder="https://forkline-proxy.run.app"
               value={settings.cloudProxyUrl || ""}
               onChange={(e) => setSettings({ ...settings, cloudProxyUrl: e.target.value })}
               style={{
                 width: "100%",
                 boxSizing: "border-box",
-                padding: "8px 10px",
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
+                padding: "7px 10px",
+                backgroundColor: "#000000",
+                border: "1px solid #27272a",
                 borderRadius: "6px",
-                color: "#f1f5f9",
+                color: "#f4f4f5",
                 fontSize: "12px",
+                fontFamily: "inherit",
                 marginBottom: "8px",
-              }}
-            />
-            <input
-              type="password"
-              placeholder="Optional Bearer token"
-              value={settings.cloudProxyToken || ""}
-              onChange={(e) => setSettings({ ...settings, cloudProxyToken: e.target.value })}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: "8px 10px",
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "6px",
-                color: "#f1f5f9",
-                fontSize: "12px",
+                outline: "none",
               }}
             />
           </div>
 
-          {/* Reset / Delete data */}
-          <div style={{ paddingTop: "12px", borderTop: "1px solid #334155" }}>
+          {/* Reset button */}
+          <div style={{ paddingTop: "12px", borderTop: "1px solid #18181b" }}>
             <button
               onClick={handleClearAll}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "6px",
+                gap: "5px",
                 background: "transparent",
-                color: "#ef4444",
-                border: "1px solid rgba(239, 68, 68, 0.4)",
+                color: "#71717a",
+                border: "1px solid #27272a",
                 borderRadius: "6px",
-                padding: "6px 12px",
-                fontSize: "12px",
+                padding: "5px 10px",
+                fontSize: "11px",
                 cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "#ef4444";
+                (e.currentTarget as HTMLElement).style.borderColor = "#7f1d1d";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "#71717a";
+                (e.currentTarget as HTMLElement).style.borderColor = "#27272a";
               }}
             >
-              <Trash2 size={13} />
-              Delete All Local Branch Data
+              <Trash2 size={12} />
+              Reset Local Database
             </button>
           </div>
         </div>
@@ -245,19 +249,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
         <div
           style={{
             padding: "12px 18px",
-            borderTop: "1px solid #334155",
+            borderTop: "1px solid #18181b",
             display: "flex",
             justifyContent: "flex-end",
             gap: "8px",
-            backgroundColor: "#0b1120",
+            backgroundColor: "#000000",
           }}
         >
           <button
             onClick={onClose}
             style={{
-              background: "#1e293b",
-              color: "#94a3b8",
-              border: "1px solid #334155",
+              background: "transparent",
+              color: "#a1a1aa",
+              border: "1px solid #27272a",
               borderRadius: "6px",
               padding: "6px 12px",
               fontSize: "12px",
@@ -269,11 +273,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
           <button
             onClick={handleSave}
             style={{
-              background: saved ? "#10b981" : "#0284c7",
-              color: "white",
+              background: "#ffffff",
+              color: "#000000",
               border: "none",
               borderRadius: "6px",
-              padding: "6px 16px",
+              padding: "6px 14px",
               fontSize: "12px",
               fontWeight: "600",
               cursor: "pointer",
@@ -282,7 +286,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, onDataRes
               gap: "6px",
             }}
           >
-            {saved ? <Check size={14} /> : <Save size={14} />}
+            {saved ? <Check size={13} /> : <Save size={13} />}
             {saved ? "Saved" : "Save Changes"}
           </button>
         </div>

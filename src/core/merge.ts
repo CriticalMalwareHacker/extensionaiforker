@@ -55,3 +55,4 @@ export function fallbackMergeSummary(messages: Message[]): string {
 
   return lines.join("\n");
 }
+

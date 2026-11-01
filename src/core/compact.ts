@@ -90,3 +90,4 @@ export function fallbackSummarize(plan: CompactionPlan): string {
 
   return lines.join("\n");
 }
+

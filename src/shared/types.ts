@@ -83,3 +83,4 @@ export type ExtensionMessage =
   | { type: "SUMMARIZE_RESPONSE"; summary: string; error?: string }
   | { type: "AUTO_NAME_REQUEST"; contextText: string }
   | { type: "AUTO_NAME_RESPONSE"; title: string; error?: string };
+

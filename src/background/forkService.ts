@@ -9,8 +9,6 @@ import { nameBranchRemote, summarizeRemote } from "../ai/remote";
 
 // Memory cache for payloads waiting to be injected into new tabs
 const pendingPayloads = new Map<number, ForkPayload>();
-
-// Mapping from nodeId to tabId
 const nodeToTab = new Map<string, number>();
 
 export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds: string[] }> {
@@ -34,29 +32,37 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
   let summaryText: string | undefined = undefined;
   let activeMessages = messagesToFork;
 
-  // Perform compaction if requested
+  // Perform compaction if requested (use fast fallback first to avoid blocking tab open)
   if (compaction === "summary") {
     const plan = prepareCompaction(messagesToFork, settings.compactKeepRecent);
     if (plan.olderMessages.length > 0) {
-      // 1. Try Nano
-      if (settings.useGeminiNano && (await nanoAvailable())) {
-        const nanoSummary = await summarizeNano(plan.textToSummarize, "compact");
-        if (nanoSummary) summaryText = nanoSummary;
-      }
-      // 2. Try Remote
-      if (!summaryText && settings.cloudProxyUrl) {
-        const remoteSummary = await summarizeRemote(plan.textToSummarize, "compact", settings);
-        if (remoteSummary) summaryText = remoteSummary;
-      }
-      // 3. Fallback
-      if (!summaryText) {
-        summaryText = fallbackSummarize(plan);
-      }
+      summaryText = fallbackSummarize(plan);
       activeMessages = plan.recentMessages;
+
+      // Asynchronously refine summary in background if AI is available
+      (async () => {
+        try {
+          let refinedSummary: string | null = null;
+          if (settings.useGeminiNano && (await nanoAvailable())) {
+            refinedSummary = await summarizeNano(plan.textToSummarize, "compact");
+          } else if (settings.cloudProxyUrl) {
+            refinedSummary = await summarizeRemote(plan.textToSummarize, "compact", settings);
+          }
+          if (refinedSummary) {
+            for (const id of createdNodeIds) {
+              const n = await db.nodes.get(id);
+              if (n) {
+                n.summary = refinedSummary;
+                await saveNode(n);
+              }
+            }
+          }
+        } catch {}
+      })();
     }
   }
 
-  // Build formatted context and full text
+  // Build formatted context and full text immediately
   const { fullText, contextText, primer } = buildForkMessage(activeMessages, {
     excludedIndexes,
     summary: summaryText,
@@ -65,23 +71,12 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
 
   const tokenEstimate = estimateTokens(fullText);
 
-  // Auto-name branch
-  let branchLabel = options.label;
-  if (!branchLabel) {
-    if (settings.useGeminiNano && (await nanoAvailable())) {
-      branchLabel = (await nameBranchNano(contextText)) || undefined;
-    }
-    if (!branchLabel && settings.cloudProxyUrl) {
-      branchLabel = (await nameBranchRemote(contextText, settings)) || undefined;
-    }
-    if (!branchLabel) {
-      const lastMsg = messagesToFork[messagesToFork.length - 1];
-      const preview = lastMsg?.text.slice(0, 30).trim() || "Branch";
-      branchLabel = `Fork: "${preview}..."`;
-    }
-  }
+  // Compute instantaneous branch label from message preview
+  const lastMsg = messagesToFork[messagesToFork.length - 1];
+  const preview = lastMsg?.text.slice(0, 32).trim() || "Turn";
+  const instantLabel = options.label || `Turn #${forkedAtIndex + 1}: "${preview}..."`;
 
-  // Iterate over all target sites (supports single fork and multi-model fork)
+  // Iterate over all target sites (immediate tab creation without blocking)
   for (const targetSite of targetSites) {
     const nodeId = crypto.randomUUID();
     createdNodeIds.push(nodeId);
@@ -89,9 +84,9 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
     const node: BranchNode = {
       id: nodeId,
       parentId: parentNodeId || null,
-      chat: null, // to be populated when URL is reported
+      chat: null,
       forkedAtIndex,
-      label: targetSites.length > 1 ? `${branchLabel} (${targetSite})` : branchLabel,
+      label: targetSites.length > 1 ? `${instantLabel} (${targetSite})` : instantLabel,
       tags: [targetSite, compaction === "summary" ? "compacted" : "full"],
       tokenEstimate,
       compaction,
@@ -113,7 +108,7 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
       contextText: fullText,
     };
 
-    // Open target tab
+    // Open target tab immediately
     const tab = await chrome.tabs.create({ url: targetUrl, active: true });
     if (tab.id) {
       pendingPayloads.set(tab.id, payload);
@@ -122,13 +117,39 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
     }
   }
 
-  // Multi-model tab grouping if more than one tab opened and tabGroups supported
+  // Async background auto-naming without blocking tab launch
+  if (!options.label) {
+    (async () => {
+      try {
+        let aiTitle: string | null = null;
+        if (settings.useGeminiNano && (await nanoAvailable())) {
+          aiTitle = await nameBranchNano(contextText);
+        } else if (settings.cloudProxyUrl) {
+          aiTitle = await nameBranchRemote(contextText, settings);
+        }
+
+        if (aiTitle) {
+          for (const id of createdNodeIds) {
+            const n = await db.nodes.get(id);
+            if (n) {
+              n.label = targetSites.length > 1 ? `${aiTitle} (${n.tags[0]})` : aiTitle;
+              await saveNode(n);
+            }
+          }
+        }
+      } catch (err) {
+        console.debug("[Forkline] Background naming skipped:", err);
+      }
+    })();
+  }
+
+  // Multi-model tab grouping
   if (createdTabIds.length > 1 && chrome.tabGroups) {
     try {
       const groupId = await chrome.tabs.group({ tabIds: createdTabIds });
       await chrome.tabGroups.update(groupId, {
-        title: `Forkline: ${branchLabel.slice(0, 20)}`,
-        color: "blue",
+        title: `Forkline: ${instantLabel.slice(0, 20)}`,
+        color: "grey",
       });
     } catch (err) {
       console.debug("[Forkline] Could not group tabs:", err);
@@ -141,7 +162,7 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
 export function getPendingPayload(tabId: number): ForkPayload | null {
   const payload = pendingPayloads.get(tabId) || null;
   if (payload) {
-    // Keep it for a short time in case tab reloads, but clean up after 15s
+    // Keep for 15s in case of tab navigation/redirect
     setTimeout(() => {
       pendingPayloads.delete(tabId);
     }, 15000);

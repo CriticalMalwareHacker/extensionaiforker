@@ -4,12 +4,13 @@ import ReactFlow, {
   Controls,
   Edge,
   Node,
-  Position,
   ConnectionLineType,
+  BackgroundVariant,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { BranchNode } from "../shared/types";
 import { BranchNodeComponent } from "./BranchNodeComponent";
+import { GitBranch } from "lucide-react";
 
 const nodeTypes = {
   branchNode: BranchNodeComponent,
@@ -32,7 +33,6 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
   onMergeNode,
   onDeleteNode,
 }) => {
-  // Filter nodes matching search query
   const filteredNodes = useMemo(() => {
     if (!searchQuery.trim()) return nodes;
     const q = searchQuery.toLowerCase();
@@ -44,12 +44,10 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
     );
   }, [nodes, searchQuery]);
 
-  // Compute hierarchical tree layout
   const { flowNodes, flowEdges } = useMemo(() => {
     const nodeMap = new Map(filteredNodes.map((n) => [n.id, n]));
     const childrenMap = new Map<string, string[]>();
 
-    // Build children relationships
     for (const node of filteredNodes) {
       if (node.parentId && nodeMap.has(node.parentId)) {
         const list = childrenMap.get(node.parentId) || [];
@@ -58,21 +56,20 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
       }
     }
 
-    // Identify roots
     const rootNodes = filteredNodes.filter(
       (n) => !n.parentId || !nodeMap.has(n.parentId)
     );
 
     const positions = new Map<string, { x: number; y: number }>();
-    let currentX = 50;
+    let currentX = 40;
 
     function layoutSubtree(nodeId: string, depth: number): { minX: number; maxX: number } {
       const children = childrenMap.get(nodeId) || [];
-      const y = depth * 170 + 50;
+      const y = depth * 160 + 40;
 
       if (children.length === 0) {
         const x = currentX;
-        currentX += 280;
+        currentX += 270;
         positions.set(nodeId, { x, y });
         return { minX: x, maxX: x };
       }
@@ -93,11 +90,11 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
 
     for (const root of rootNodes) {
       layoutSubtree(root.id, 0);
-      currentX += 80;
+      currentX += 60;
     }
 
     const flowNodes: Node[] = filteredNodes.map((n) => {
-      const pos = positions.get(n.id) || { x: 50, y: 50 };
+      const pos = positions.get(n.id) || { x: 40, y: 40 };
       const isCurrentTab = Boolean(
         activeChatUrl && n.chat?.url && activeChatUrl.includes(n.chat.conversationId)
       );
@@ -126,8 +123,8 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
           type: ConnectionLineType.SmoothStep,
           animated: node.isMerged,
           style: {
-            stroke: node.isMerged ? "#a855f7" : "#38bdf8",
-            strokeWidth: 2,
+            stroke: node.isMerged ? "#ffffff" : "#3f3f46",
+            strokeWidth: node.isMerged ? 1.5 : 1.2,
           },
         });
       }
@@ -145,24 +142,55 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          color: "#94a3b8",
+          color: "#71717a",
           textAlign: "center",
-          padding: "24px",
+          padding: "32px 24px",
+          fontFamily: "'Inter', sans-serif",
         }}
       >
-        <div style={{ fontSize: "36px", marginBottom: "12px" }}>🌿</div>
-        <div style={{ fontSize: "16px", fontWeight: "600", color: "#f1f5f9", marginBottom: "6px" }}>
+        <div
+          style={{
+            width: "40px",
+            height: "40px",
+            borderRadius: "50%",
+            border: "1px solid #27272a",
+            backgroundColor: "#09090b",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "16px",
+            color: "#fafafa",
+          }}
+        >
+          <GitBranch size={18} />
+        </div>
+        <div
+          style={{
+            fontSize: "14px",
+            fontWeight: "600",
+            color: "#fafafa",
+            marginBottom: "6px",
+            letterSpacing: "-0.2px",
+          }}
+        >
           No branches yet
         </div>
-        <div style={{ fontSize: "13px", maxWidth: "280px", lineHeight: "1.5" }}>
-          Open ChatGPT, Claude, or Gemini and click the <b>Fork</b> button on any message to create your first branch!
+        <div
+          style={{
+            fontSize: "12px",
+            color: "#71717a",
+            maxWidth: "260px",
+            lineHeight: "1.5",
+          }}
+        >
+          Open ChatGPT, Claude, or Gemini and click <b>Fork</b> on any message to start branching.
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", background: "#090d16" }}>
+    <div style={{ width: "100%", height: "100%", background: "#000000" }}>
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -171,8 +199,20 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         minZoom={0.2}
         maxZoom={1.5}
       >
-        <Background color="#334155" gap={20} size={1} />
-        <Controls style={{ background: "#1e293b", borderColor: "#334155" }} />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={24}
+          size={1}
+          color="#1c1c1f"
+        />
+        <Controls
+          style={{
+            background: "#09090b",
+            border: "1px solid #27272a",
+            borderRadius: "6px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.5)",
+          }}
+        />
       </ReactFlow>
     </div>
   );

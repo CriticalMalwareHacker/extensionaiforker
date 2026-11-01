@@ -1,7 +1,6 @@
 import { SiteAdapter } from "../adapters";
 import { Message, Site } from "../shared/types";
 import { openSelectiveForkModal } from "./forkDialogModal";
-import { showToast } from "./toast";
 
 export function injectForkButtons(
   adapter: SiteAdapter,
@@ -22,16 +21,17 @@ export function injectForkButtons(
     }
     el.setAttribute("data-forkline-injected", "true");
 
-    // Container for fork button
+    // Container for fork button group
     const btnContainer = document.createElement("div");
     btnContainer.className = "forkline-btn-wrapper";
     Object.assign(btnContainer.style, {
       display: "inline-flex",
       alignItems: "center",
-      gap: "2px",
-      margin: "4px 6px",
-      zIndex: "100",
+      gap: "0px",
+      margin: "2px 4px",
+      zIndex: "50",
       verticalAlign: "middle",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
     });
 
     const forkBtn = document.createElement("button");
@@ -44,17 +44,18 @@ export function injectForkButtons(
       padding: "4px 8px",
       fontSize: "12px",
       fontWeight: "500",
-      color: "#94a3b8",
-      backgroundColor: "rgba(30, 41, 59, 0.7)",
-      border: "1px solid rgba(148, 163, 184, 0.2)",
-      borderRadius: "6px",
+      color: "#f4f4f5",
+      backgroundColor: "#09090b",
+      border: "1px solid #27272a",
+      borderRadius: "6px 0 0 6px",
       cursor: "pointer",
       transition: "all 0.15s ease",
       lineHeight: "1",
+      fontFamily: "inherit",
     });
 
     forkBtn.innerHTML = `
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #38bdf8;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #fafafa;">
         <line x1="6" y1="3" x2="6" y2="15"></line>
         <circle cx="18" cy="6" r="3"></circle>
         <circle cx="6" cy="18" r="3"></circle>
@@ -64,18 +65,22 @@ export function injectForkButtons(
     `;
 
     forkBtn.addEventListener("mouseenter", () => {
-      forkBtn.style.color = "#f8fafc";
-      forkBtn.style.backgroundColor = "#1e293b";
-      forkBtn.style.borderColor = "#38bdf8";
+      forkBtn.style.color = "#000000";
+      forkBtn.style.backgroundColor = "#ffffff";
+      forkBtn.style.borderColor = "#ffffff";
+      const icon = forkBtn.querySelector("svg");
+      if (icon) icon.style.stroke = "#000000";
     });
 
     forkBtn.addEventListener("mouseleave", () => {
-      forkBtn.style.color = "#94a3b8";
-      forkBtn.style.backgroundColor = "rgba(30, 41, 59, 0.7)";
-      forkBtn.style.borderColor = "rgba(148, 163, 184, 0.2)";
+      forkBtn.style.color = "#f4f4f5";
+      forkBtn.style.backgroundColor = "#09090b";
+      forkBtn.style.borderColor = "#27272a";
+      const icon = forkBtn.querySelector("svg");
+      if (icon) icon.style.stroke = "#fafafa";
     });
 
-    // Options button (down arrow for selective context / multi-model)
+    // Options dropdown button (arrow)
     const optionsBtn = document.createElement("button");
     optionsBtn.className = "forkline-options-btn";
     optionsBtn.title = "Selective context & multi-model fork options";
@@ -83,11 +88,11 @@ export function injectForkButtons(
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      padding: "4px 4px",
+      padding: "4px 5px",
       fontSize: "10px",
-      color: "#94a3b8",
-      backgroundColor: "rgba(30, 41, 59, 0.7)",
-      border: "1px solid rgba(148, 163, 184, 0.2)",
+      color: "#a1a1aa",
+      backgroundColor: "#09090b",
+      border: "1px solid #27272a",
       borderLeft: "none",
       borderRadius: "0 6px 6px 0",
       cursor: "pointer",
@@ -100,19 +105,30 @@ export function injectForkButtons(
       </svg>
     `;
 
-    // Direct click on Fork button: triggers quick fork
+    optionsBtn.addEventListener("mouseenter", () => {
+      optionsBtn.style.color = "#000000";
+      optionsBtn.style.backgroundColor = "#ffffff";
+      optionsBtn.style.borderColor = "#ffffff";
+    });
+
+    optionsBtn.addEventListener("mouseleave", () => {
+      optionsBtn.style.color = "#a1a1aa";
+      optionsBtn.style.backgroundColor = "#09090b";
+      optionsBtn.style.borderColor = "#27272a";
+    });
+
+    // 1-Click Fork
     forkBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
       onForkTriggered(index);
     });
 
-    // Click on options button: opens modal
+    // Selective Options Fork
     optionsBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       e.preventDefault();
 
-      // Extract all current messages
       const allMessages = elements.map((item, i) => adapter.readMessage(item, i));
 
       openSelectiveForkModal({
@@ -130,22 +146,28 @@ export function injectForkButtons(
       });
     });
 
-    // Merge styling: round forkBtn corners if options button is present
-    forkBtn.style.borderRadius = "6px 0 0 6px";
     btnContainer.appendChild(forkBtn);
     btnContainer.appendChild(optionsBtn);
 
-    // Find the best insertion point inside the message
-    // Usually an actions bar or right at the end of the message element
-    const actionToolbar =
-      el.querySelector("div[class*=\"action\" i], div[class*=\"toolbar\" i], div[class*=\"footer\" i]") ||
-      el.lastElementChild ||
-      el;
+    // Find insertion target
+    const existingCopyBtn = el.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i]");
+    const existingToolbar =
+      existingCopyBtn?.parentElement ||
+      el.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i], div[class*=\"footer\" i]");
 
-    if (actionToolbar && actionToolbar !== el) {
-      actionToolbar.appendChild(btnContainer);
+    if (existingToolbar) {
+      existingToolbar.appendChild(btnContainer);
     } else {
-      el.appendChild(btnContainer);
+      const inlineRow = document.createElement("div");
+      inlineRow.className = "forkline-inline-row";
+      Object.assign(inlineRow.style, {
+        display: "flex",
+        justifyContent: "flex-end",
+        marginTop: "4px",
+        marginBottom: "4px",
+      });
+      inlineRow.appendChild(btnContainer);
+      el.appendChild(inlineRow);
     }
   });
 }

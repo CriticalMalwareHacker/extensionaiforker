@@ -22,7 +22,6 @@ export const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Load nodes from DB
   const loadNodes = useCallback(async () => {
     try {
       const all = await getAllNodes();
@@ -32,7 +31,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Check active tab URL
   const checkActiveTab = useCallback(async () => {
     try {
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -48,11 +46,8 @@ export const App: React.FC = () => {
     loadNodes();
     checkActiveTab();
 
-    // Listen for tab activation to highlight matching node
     const onTabActivated = () => checkActiveTab();
     chrome.tabs.onActivated?.addListener(onTabActivated);
-
-    // Refresh every few seconds or when storage changes
     const interval = setInterval(loadNodes, 3000);
 
     return () => {
@@ -61,11 +56,9 @@ export const App: React.FC = () => {
     };
   }, [loadNodes, checkActiveTab]);
 
-  // Navigate to chat node
   const handleSelectNode = async (node: BranchNode) => {
     if (!node.chat?.url) return;
 
-    // Check if a tab with this conversation is already open
     const tabs = await chrome.tabs.query({});
     const existing = tabs.find((t) => t.url && t.url.includes(node.chat!.conversationId));
 
@@ -99,10 +92,8 @@ export const App: React.FC = () => {
     node.summary = summary;
     await saveNode(node);
 
-    // Copy formatted text to clipboard
     await navigator.clipboard.writeText(formattedText);
 
-    // Open or focus parent chat
     if (node.parentId) {
       const parentNode = nodes.find((n) => n.id === node.parentId);
       if (parentNode?.chat?.url) {
@@ -113,12 +104,11 @@ export const App: React.FC = () => {
     await loadNodes();
   };
 
-  // Export functions
   const handleExportJSON = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(nodes, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `forkline-branches-${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute("download", `forkline-${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -126,13 +116,12 @@ export const App: React.FC = () => {
   };
 
   const handleExportMarkdown = () => {
-    let md = `# Forkline Conversation Branches\n*Exported on ${new Date().toLocaleString()}*\n\n`;
+    let md = `# Forkline Branches\n*Exported ${new Date().toLocaleString()}*\n\n`;
     for (const node of nodes) {
-      md += `## Branch: ${node.label}\n`;
+      md += `## ${node.label}\n`;
       md += `- **Site**: ${node.chat?.site || "unknown"}\n`;
       md += `- **Created**: ${new Date(node.createdAt).toLocaleString()}\n`;
-      md += `- **Parent ID**: ${node.parentId || "Root"}\n`;
-      md += `- **Token Estimate**: ~${node.tokenEstimate.toLocaleString()}\n`;
+      md += `- **Tokens**: ~${node.tokenEstimate.toLocaleString()}\n`;
       if (node.chat?.url) md += `- **URL**: [Open Chat](${node.chat.url})\n`;
       if (node.summary) md += `\n**Summary**:\n${node.summary}\n`;
       md += `\n---\n\n`;
@@ -141,7 +130,7 @@ export const App: React.FC = () => {
     const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(md);
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `forkline-branches-${new Date().toISOString().slice(0, 10)}.md`);
+    downloadAnchor.setAttribute("download", `forkline-${new Date().toISOString().slice(0, 10)}.md`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -158,17 +147,17 @@ export const App: React.FC = () => {
         display: "flex",
         flexDirection: "column",
         height: "100vh",
-        backgroundColor: "#090d16",
-        color: "#f8fafc",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        backgroundColor: "#000000",
+        color: "#fafafa",
+        fontFamily: "'Inter', sans-serif",
       }}
     >
-      {/* Top Header */}
+      {/* Top Bar */}
       <div
         style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid #1e293b",
-          backgroundColor: "#0f172a",
+          padding: "10px 14px",
+          borderBottom: "1px solid #18181b",
+          backgroundColor: "#000000",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -178,37 +167,51 @@ export const App: React.FC = () => {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <div
             style={{
-              background: "linear-gradient(135deg, #0284c7, #38bdf8)",
-              padding: "6px",
-              borderRadius: "8px",
+              width: "24px",
+              height: "24px",
+              borderRadius: "6px",
+              backgroundColor: "#18181b",
+              border: "1px solid #27272a",
               display: "flex",
-              color: "white",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fafafa",
             }}
           >
-            <GitBranch size={16} />
+            <GitBranch size={13} />
           </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: "15px", fontWeight: "700", letterSpacing: "-0.3px" }}>
-              Forkline
-            </h1>
-          </div>
+          <span style={{ fontSize: "13px", fontWeight: "600", letterSpacing: "-0.2px" }}>
+            Forkline
+          </span>
         </div>
 
         {/* Action icons */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
           <button
             onClick={loadNodes}
             title="Refresh tree"
             style={{
               background: "transparent",
-              border: "1px solid #334155",
-              color: "#94a3b8",
+              border: "1px solid #27272a",
+              color: "#a1a1aa",
               borderRadius: "6px",
-              padding: "6px",
+              padding: "5px",
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "#18181b";
+              (e.currentTarget as HTMLElement).style.color = "#fafafa";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+              (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
             }}
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={13} />
           </button>
 
           {/* Export Dropdown */}
@@ -218,14 +221,26 @@ export const App: React.FC = () => {
               title="Export branches"
               style={{
                 background: "transparent",
-                border: "1px solid #334155",
-                color: "#94a3b8",
+                border: "1px solid #27272a",
+                color: "#a1a1aa",
                 borderRadius: "6px",
-                padding: "6px",
+                padding: "5px",
                 cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "#18181b";
+                (e.currentTarget as HTMLElement).style.color = "#fafafa";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.background = "transparent";
+                (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
               }}
             >
-              <Download size={14} />
+              <Download size={13} />
             </button>
 
             {exportMenuOpen && (
@@ -235,13 +250,14 @@ export const App: React.FC = () => {
                   right: 0,
                   top: "100%",
                   marginTop: "6px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "8px",
-                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5)",
+                  backgroundColor: "#09090b",
+                  border: "1px solid #27272a",
+                  borderRadius: "6px",
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.8)",
                   zIndex: 200,
                   minWidth: "150px",
                   overflow: "hidden",
+                  padding: "4px",
                 }}
               >
                 <button
@@ -251,16 +267,20 @@ export const App: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    padding: "8px 12px",
+                    padding: "7px 10px",
                     background: "none",
                     border: "none",
-                    color: "#f1f5f9",
+                    borderRadius: "4px",
+                    color: "#f4f4f5",
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
+                    transition: "background 0.15s ease",
                   }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
                 >
-                  <FileText size={14} color="#38bdf8" /> Export Markdown
+                  <FileText size={13} /> Export Markdown
                 </button>
                 <button
                   onClick={handleExportJSON}
@@ -269,16 +289,20 @@ export const App: React.FC = () => {
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    padding: "8px 12px",
+                    padding: "7px 10px",
                     background: "none",
                     border: "none",
-                    color: "#f1f5f9",
+                    borderRadius: "4px",
+                    color: "#f4f4f5",
                     fontSize: "12px",
                     cursor: "pointer",
                     textAlign: "left",
+                    transition: "background 0.15s ease",
                   }}
+                  onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "#18181b")}
+                  onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
                 >
-                  <FileJson size={14} color="#f59e0b" /> Export JSON
+                  <FileJson size={13} /> Export JSON
                 </button>
               </div>
             )}
@@ -289,52 +313,85 @@ export const App: React.FC = () => {
             title="Settings"
             style={{
               background: "transparent",
-              border: "1px solid #334155",
-              color: "#94a3b8",
+              border: "1px solid #27272a",
+              color: "#a1a1aa",
               borderRadius: "6px",
-              padding: "6px",
+              padding: "5px",
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "#18181b";
+              (e.currentTarget as HTMLElement).style.color = "#fafafa";
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = "transparent";
+              (e.currentTarget as HTMLElement).style.color = "#a1a1aa";
             }}
           >
-            <Settings size={14} />
+            <Settings size={13} />
           </button>
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Input (shadcn input) */}
       <div
         style={{
-          padding: "8px 14px",
-          backgroundColor: "#0b1120",
-          borderBottom: "1px solid #1e293b",
+          padding: "8px 12px",
+          backgroundColor: "#000000",
+          borderBottom: "1px solid #18181b",
           display: "flex",
           alignItems: "center",
           gap: "8px",
         }}
       >
-        <Search size={14} color="#64748b" />
-        <input
-          type="text"
-          placeholder="Search branches by label, tag, or site..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+        <div
           style={{
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: "#f1f5f9",
-            fontSize: "12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            backgroundColor: "#09090b",
+            border: "1px solid #27272a",
+            borderRadius: "6px",
+            padding: "5px 10px",
+            width: "100%",
           }}
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery("")}
-            style={{ background: "none", border: "none", color: "#64748b", fontSize: "14px", cursor: "pointer" }}
-          >
-            &times;
-          </button>
-        )}
+        >
+          <Search size={13} color="#71717a" />
+          <input
+            type="text"
+            placeholder="Search branches..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: "#fafafa",
+              fontSize: "12px",
+              fontFamily: "inherit",
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#71717a",
+                fontSize: "12px",
+                cursor: "pointer",
+                padding: "0 2px",
+              }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Visual Branch Tree Area */}
@@ -349,23 +406,23 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* Footer Info */}
+      {/* Footer Status Bar */}
       <div
         style={{
           padding: "6px 14px",
-          backgroundColor: "#0f172a",
-          borderTop: "1px solid #1e293b",
+          backgroundColor: "#000000",
+          borderTop: "1px solid #18181b",
           fontSize: "11px",
-          color: "#64748b",
+          color: "#71717a",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}
       >
         <span>
-          {nodes.length} branch{nodes.length === 1 ? "" : "es"} tracked
+          {nodes.length} branch{nodes.length === 1 ? "" : "es"}
         </span>
-        <span style={{ color: "#38bdf8" }}>Local-first IndexedDB</span>
+        <span style={{ color: "#a1a1aa" }}>Local IndexedDB</span>
       </div>
 
       {/* Modals */}

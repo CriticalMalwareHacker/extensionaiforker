@@ -29,12 +29,18 @@ export class ChatGPTAdapter implements SiteAdapter {
   }
 
   getMessageElements(): HTMLElement[] {
-    // Collect turns or elements with data-message-author-role
+    // Prefer article turns because they wrap both the message content and action button toolbars
+    const turns = Array.from(
+      document.querySelectorAll<HTMLElement>("article[data-testid^=\"conversation-turn\"], article")
+    );
+    if (turns.length > 0) {
+      return turns;
+    }
+    // Fallback: elements with data-message-author-role
     const elements = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.authorRole));
     if (elements.length > 0) {
       return elements;
     }
-    // Fallback: conversation turns
     return Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageTurn));
   }
 

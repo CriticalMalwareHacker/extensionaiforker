@@ -6,3 +6,4 @@ COPY . .
 RUN npm run build || true
 EXPOSE 8080
 CMD ["node", "dist/server.js"]
+

@@ -1,6 +1,5 @@
 import { Message, Site } from "../shared/types";
-import { estimateTokens, checkTokenLimits } from "../core/tokens";
-import { showToast } from "./toast";
+import { checkTokenLimits } from "../core/tokens";
 
 export interface ModalOptions {
   messages: Message[];
@@ -16,12 +15,10 @@ export interface ModalOptions {
 }
 
 export function openSelectiveForkModal(options: ModalOptions): void {
-  // Remove any existing modal
   document.getElementById("forkline-modal-backdrop")?.remove();
 
   const { messages, currentIndex, currentSite, onConfirm, onCancel } = options;
 
-  // Active messages up to the current turn
   const availableMessages = messages.filter((m) => m.index <= currentIndex);
   const excludedSet = new Set<number>();
   let compaction: "none" | "summary" = "none";
@@ -35,26 +32,26 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     left: "0",
     width: "100vw",
     height: "100vh",
-    backgroundColor: "rgba(15, 23, 42, 0.75)",
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
     backdropFilter: "blur(4px)",
     zIndex: "2147483646",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   });
 
   const modal = document.createElement("div");
   modal.id = "forkline-modal";
   Object.assign(modal.style, {
-    backgroundColor: "#0f172a",
-    color: "#f8fafc",
+    backgroundColor: "#09090b",
+    color: "#fafafa",
     width: "90%",
-    maxWidth: "620px",
+    maxWidth: "540px",
     maxHeight: "85vh",
-    borderRadius: "14px",
-    border: "1px solid #334155",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+    borderRadius: "10px",
+    border: "1px solid #27272a",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
@@ -68,112 +65,98 @@ export function openSelectiveForkModal(options: ModalOptions): void {
 
   const renderContent = () => {
     const status = calculateCurrentTokens();
-    const tokenBadgeColor = status.exceedsMax
-      ? "#ef4444"
-      : status.exceedsWarning
-      ? "#f59e0b"
-      : "#10b981";
 
     modal.innerHTML = `
-      <div style="padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
+      <div style="padding: 14px 18px; border-bottom: 1px solid #18181b; display: flex; justify-content: space-between; align-items: center;">
         <div>
-          <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
-              <line x1="6" y1="3" x2="6" y2="15"></line>
-              <circle cx="18" cy="6" r="3"></circle>
-              <circle cx="6" cy="18" r="3"></circle>
-              <path d="M18 9a9 9 0 0 1-9 9"></path>
-            </svg>
-            Forkline: Selective Context
-          </h2>
-          <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
-            Forking up to message #${currentIndex + 1} (${availableMessages.length} turns)
+          <div style="font-size: 14px; font-weight: 600; color: #fafafa; letter-spacing: -0.2px;">
+            Selective Context Fork
+          </div>
+          <div style="font-size: 11px; color: #71717a; margin-top: 1px;">
+            Turn #${currentIndex + 1} (${availableMessages.length} total turns)
           </div>
         </div>
-        <button id="modal-close-btn" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px;">&times;</button>
+        <button id="modal-close-btn" style="background: transparent; border: none; color: #71717a; font-size: 16px; cursor: pointer; padding: 4px;">&times;</button>
       </div>
 
-      <div style="padding: 16px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px;">
-        <!-- Token preview indicator -->
-        <div style="background: #1e293b; padding: 10px 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155;">
-          <div>
-            <span style="font-size: 13px; font-weight: 500; color: #cbd5e1;">Context Size:</span>
-            <span style="font-size: 13px; font-weight: 700; color: ${tokenBadgeColor}; margin-left: 6px;">
-              ~${status.tokens.toLocaleString()} tokens
-            </span>
+      <div style="padding: 16px 18px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+        <!-- Token preview -->
+        <div style="background: #000000; padding: 8px 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #27272a;">
+          <div style="font-size: 12px; color: #a1a1aa;">
+            Estimated context size: <b style="color: #fafafa; font-family: monospace;">~${status.tokens.toLocaleString()} tokens</b>
           </div>
-          <span style="font-size: 11px; color: ${status.exceedsWarning ? "#f59e0b" : "#94a3b8"};">
-            ${status.exceedsMax ? "Warning: Exceeds safe model limit!" : status.exceedsWarning ? "Warning: Approaching site context limit" : "Safe for model context"}
+          <span style="font-size: 11px; color: ${status.exceedsWarning ? "#f43f5e" : "#71717a"};">
+            ${status.exceedsMax ? "Exceeds recommended limit" : status.exceedsWarning ? "High token count" : "Optimal"}
           </span>
         </div>
 
-        <!-- Target models (Multi-model fork) -->
+        <!-- Target platforms -->
         <div>
-          <label style="font-size: 13px; font-weight: 600; color: #e2e8f0; display: block; margin-bottom: 6px;">
-            Target Model(s) <span style="font-size: 11px; font-weight: 400; color: #94a3b8;">(Select multiple for side-by-side multi-model comparison)</span>
+          <label style="font-size: 12px; font-weight: 500; color: #e4e4e7; display: block; margin-bottom: 6px;">
+            Target Platform(s)
           </label>
-          <div style="display: flex; gap: 10px;">
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 8px 12px; border-radius: 8px; border: 1px solid ${selectedSites.has("chatgpt") ? "#38bdf8" : "#334155"}; cursor: pointer; font-size: 13px;">
+          <div style="display: flex; gap: 8px;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #000000; padding: 7px 10px; border-radius: 6px; border: 1px solid ${selectedSites.has("chatgpt") ? "#ffffff" : "#27272a"}; cursor: pointer; font-size: 12px;">
               <input type="checkbox" data-site="chatgpt" ${selectedSites.has("chatgpt") ? "checked" : ""} />
               ChatGPT
             </label>
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 8px 12px; border-radius: 8px; border: 1px solid ${selectedSites.has("claude") ? "#38bdf8" : "#334155"}; cursor: pointer; font-size: 13px;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #000000; padding: 7px 10px; border-radius: 6px; border: 1px solid ${selectedSites.has("claude") ? "#ffffff" : "#27272a"}; cursor: pointer; font-size: 12px;">
               <input type="checkbox" data-site="claude" ${selectedSites.has("claude") ? "checked" : ""} />
               Claude
             </label>
-            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #1e293b; padding: 8px 12px; border-radius: 8px; border: 1px solid ${selectedSites.has("gemini") ? "#38bdf8" : "#334155"}; cursor: pointer; font-size: 13px;">
+            <label style="flex: 1; display: flex; align-items: center; gap: 8px; background: #000000; padding: 7px 10px; border-radius: 6px; border: 1px solid ${selectedSites.has("gemini") ? "#ffffff" : "#27272a"}; cursor: pointer; font-size: 12px;">
               <input type="checkbox" data-site="gemini" ${selectedSites.has("gemini") ? "checked" : ""} />
               Gemini
             </label>
           </div>
         </div>
 
-        <!-- Smart Compaction option -->
-        <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-          <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
-            <input type="checkbox" id="compaction-checkbox" ${compaction === "summary" ? "checked" : ""} style="margin-top: 3px;" />
+        <!-- Smart Compaction -->
+        <div style="background: #000000; padding: 10px 12px; border-radius: 6px; border: 1px solid #18181b;">
+          <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="compaction-checkbox" ${compaction === "summary" ? "checked" : ""} style="margin-top: 2px;" />
             <div>
-              <div style="font-size: 13px; font-weight: 600; color: #f8fafc;">
-                Smart Compaction (Preserve code, summarize older history)
+              <div style="font-size: 12px; font-weight: 500; color: #fafafa;">
+                Smart Compaction
               </div>
-              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
-                Keeps the last 6 turns and all code snippets verbatim; compresses earlier turns into a compact digest.
+              <div style="font-size: 11px; color: #71717a; margin-top: 1px;">
+                Keep the last 6 turns and all code snippets verbatim; compress older turns.
               </div>
             </div>
           </label>
         </div>
 
-        <!-- Turn Selection list -->
+        <!-- Message List -->
         <div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 13px; font-weight: 600; color: #e2e8f0;">
-              Include Messages:
+            <label style="font-size: 12px; font-weight: 500; color: #e4e4e7;">
+              Included Messages
             </label>
-            <button id="toggle-all-btn" style="background: none; border: none; color: #38bdf8; font-size: 11px; cursor: pointer; text-decoration: underline;">
-              ${excludedSet.size === 0 ? "Exclude All" : "Select All"}
+            <button id="toggle-all-btn" style="background: none; border: none; color: #a1a1aa; font-size: 11px; cursor: pointer; text-decoration: underline;">
+              ${excludedSet.size === 0 ? "Deselect All" : "Select All"}
             </button>
           </div>
 
-          <div id="messages-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; padding-right: 4px;">
+          <div id="messages-list" style="display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto;">
             ${availableMessages
               .map((msg) => {
                 const isExcluded = excludedSet.has(msg.index);
                 const roleBadge =
                   msg.role === "user"
-                    ? '<span style="background: #0284c7; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">USER</span>'
-                    : '<span style="background: #475569; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">AI</span>';
+                    ? '<span style="background: #27272a; color: #fafafa; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: monospace;">USER</span>'
+                    : '<span style="background: #18181b; color: #a1a1aa; border: 1px solid #27272a; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600; font-family: monospace;">AI</span>';
 
-                const snippet = msg.text.slice(0, 120).replace(/</g, "&lt;");
+                const snippet = msg.text.slice(0, 100).replace(/</g, "&lt;");
 
                 return `
-                <div style="display: flex; align-items: center; gap: 10px; background: ${isExcluded ? "#0f172a" : "#1e293b"}; padding: 8px 10px; border-radius: 6px; border: 1px solid ${isExcluded ? "#334155" : "#475569"}; opacity: ${isExcluded ? "0.6" : "1"};">
+                <div style="display: flex; align-items: center; gap: 8px; background: #000000; padding: 6px 10px; border-radius: 5px; border: 1px solid ${isExcluded ? "#18181b" : "#27272a"}; opacity: ${isExcluded ? "0.4" : "1"};">
                   <input type="checkbox" class="msg-checkbox" data-index="${msg.index}" ${isExcluded ? "" : "checked"} />
                   ${roleBadge}
-                  <div style="font-size: 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
+                  <div style="font-size: 11px; color: #d4d4d8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;">
                     ${snippet}...
                   </div>
-                  ${msg.hasAttachments ? '<span title="Has attachment" style="font-size: 10px; color: #fbbf24;">📎</span>' : ""}
-                  ${msg.codeBlocks ? '<span title="Has code" style="font-size: 10px; color: #38bdf8;">💻</span>' : ""}
+                  ${msg.hasAttachments ? '<span title="Attachment" style="font-size: 9px; color: #a1a1aa;">📎</span>' : ""}
+                  ${msg.codeBlocks ? '<span title="Code" style="font-size: 9px; color: #fafafa;">💻</span>' : ""}
                 </div>
               `;
               })
@@ -182,17 +165,16 @@ export function openSelectiveForkModal(options: ModalOptions): void {
         </div>
       </div>
 
-      <div style="padding: 14px 20px; border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 10px; background: #0b1120;">
-        <button id="modal-cancel-btn" style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;">
+      <div style="padding: 12px 18px; border-top: 1px solid #18181b; display: flex; justify-content: flex-end; gap: 8px; background: #000000;">
+        <button id="modal-cancel-btn" style="background: transparent; color: #a1a1aa; border: 1px solid #27272a; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">
           Cancel
         </button>
-        <button id="modal-fork-btn" style="background: #0284c7; color: white; border: none; padding: 8px 18px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          Start Fork (${selectedSites.size} ${selectedSites.size > 1 ? "models" : "chat"})
+        <button id="modal-fork-btn" style="background: #ffffff; color: #000000; border: none; padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          Start Fork (${selectedSites.size} ${selectedSites.size > 1 ? "tabs" : "chat"})
         </button>
       </div>
     `;
 
-    // Reattach listeners
     modal.querySelector("#modal-close-btn")?.addEventListener("click", () => {
       backdrop.remove();
       onCancel();
@@ -209,7 +191,7 @@ export function openSelectiveForkModal(options: ModalOptions): void {
         if (e.target.checked) selectedSites.add(s);
         else {
           if (selectedSites.size > 1) selectedSites.delete(s);
-          else e.target.checked = true; // keep at least one
+          else e.target.checked = true;
         }
         renderContent();
       });

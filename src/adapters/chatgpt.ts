@@ -2,9 +2,8 @@ import { SiteAdapter } from "./types";
 import { Message, Site } from "../shared/types";
 
 const SELECTORS = {
-  // Matches message elements or conversation turns
-  messageTurn: "article[data-testid^=\"conversation-turn\"], [data-message-author-role]",
   authorRole: "[data-message-author-role]",
+  messageTurn: "[data-testid^=\"conversation-turn\"], [data-message-author-role], article",
   codeBlock: "pre",
   attachments: "img[alt*=\"Uploaded\"], [data-testid*=\"attachment\"], [aria-label*=\"attachment\" i]",
   inputBox: "#prompt-textarea, textarea[data-id=\"root\"], div#prompt-textarea[contenteditable=\"true\"]",
@@ -29,18 +28,21 @@ export class ChatGPTAdapter implements SiteAdapter {
   }
 
   getMessageElements(): HTMLElement[] {
-    // Prefer article turns because they wrap both the message content and action button toolbars
+    // 1. Primary: [data-message-author-role] is ChatGPT's universal turn marker
+    const roleElements = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.authorRole));
+    if (roleElements.length > 0) {
+      return roleElements;
+    }
+
+    // 2. Fallback: conversation turns with data-testid
     const turns = Array.from(
-      document.querySelectorAll<HTMLElement>("article[data-testid^=\"conversation-turn\"], article")
+      document.querySelectorAll<HTMLElement>("[data-testid^=\"conversation-turn\"]")
     );
     if (turns.length > 0) {
       return turns;
     }
-    // Fallback: elements with data-message-author-role
-    const elements = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.authorRole));
-    if (elements.length > 0) {
-      return elements;
-    }
+
+    // 3. Last fallback: article turns
     return Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageTurn));
   }
 
@@ -75,8 +77,10 @@ export class ChatGPTAdapter implements SiteAdapter {
     // Detect attachments
     const hasAttachments = el.querySelectorAll(SELECTORS.attachments).length > 0;
 
-    // Clean text: clone element to sanitize code blocks or copy text
-    const text = el.innerText || el.textContent || "";
+    // Clean text by cloning and stripping out any injected fork buttons
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".forkline-btn-wrapper, .forkline-action-btn").forEach((b) => b.remove());
+    const text = clone.innerText || clone.textContent || "";
 
     return {
       index,

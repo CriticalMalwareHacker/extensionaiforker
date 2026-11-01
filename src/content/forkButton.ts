@@ -16,10 +16,13 @@ export function injectForkButtons(
   const elements = adapter.getMessageElements();
 
   elements.forEach((el, index) => {
-    if (el.getAttribute("data-forkline-injected") === "true") {
+    // Check if a fork button wrapper already exists inside or adjacent to this turn
+    if (
+      el.querySelector(".forkline-btn-wrapper") ||
+      el.parentElement?.querySelector(".forkline-btn-wrapper")
+    ) {
       return;
     }
-    el.setAttribute("data-forkline-injected", "true");
 
     // Container for fork button group
     const btnContainer = document.createElement("div");
@@ -28,7 +31,7 @@ export function injectForkButtons(
       display: "inline-flex",
       alignItems: "center",
       gap: "0px",
-      margin: "2px 4px",
+      margin: "2px 6px",
       zIndex: "50",
       verticalAlign: "middle",
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -36,7 +39,7 @@ export function injectForkButtons(
 
     const forkBtn = document.createElement("button");
     forkBtn.className = "forkline-action-btn";
-    forkBtn.title = `Fork chat from this message (#${index + 1})`;
+    forkBtn.title = `Fork conversation from turn #${index + 1}`;
     Object.assign(forkBtn.style, {
       display: "inline-flex",
       alignItems: "center",
@@ -149,15 +152,20 @@ export function injectForkButtons(
     btnContainer.appendChild(forkBtn);
     btnContainer.appendChild(optionsBtn);
 
-    // Find insertion target
-    const existingCopyBtn = el.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i]");
-    const existingToolbar =
-      existingCopyBtn?.parentElement ||
-      el.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i], div[class*=\"footer\" i]");
+    // Look for existing action toolbar (Copy, Thumbs down, Share, etc.)
+    const copyOrActionBtn =
+      el.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]") ||
+      el.parentElement?.querySelector("button[aria-label*='Copy' i], button[title*='Copy' i], button[data-testid*='copy' i], [aria-label*='copy' i]");
 
-    if (existingToolbar) {
-      existingToolbar.appendChild(btnContainer);
+    const actionRow =
+      copyOrActionBtn?.closest("div[class*='flex'], div[role='group']") ||
+      el.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]") ||
+      el.parentElement?.querySelector("div.empty\\:hidden, div[class*=\"action\" i], div[class*=\"toolbar\" i]");
+
+    if (actionRow) {
+      actionRow.appendChild(btnContainer);
     } else {
+      // For user messages or when action row isn't mounted yet
       const inlineRow = document.createElement("div");
       inlineRow.className = "forkline-inline-row";
       Object.assign(inlineRow.style, {

@@ -98,8 +98,37 @@ export const App: React.FC = () => {
         getAllNodes(),
         getAllGroups(),
       ]);
-      setNodes(allNodes);
-      setGroups(allGroups);
+
+      setNodes((prevNodes) => {
+        if (
+          prevNodes.length === allNodes.length &&
+          prevNodes.every((p, i) => {
+            const n = allNodes[i];
+            return (
+              n &&
+              p.id === n.id &&
+              p.label === n.label &&
+              p.groupId === n.groupId &&
+              p.isMerged === n.isMerged &&
+              p.summary === n.summary &&
+              p.chat?.url === n.chat?.url
+            );
+          })
+        ) {
+          return prevNodes;
+        }
+        return allNodes;
+      });
+
+      setGroups((prevGroups) => {
+        if (
+          prevGroups.length === allGroups.length &&
+          prevGroups.every((p, i) => p.id === allGroups[i]?.id && p.name === allGroups[i]?.name)
+        ) {
+          return prevGroups;
+        }
+        return allGroups;
+      });
     } catch (err) {
       console.error("[Forkline Sidepanel] Failed to load data:", err);
     }
@@ -258,6 +287,32 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleResetFilters = useCallback(() => {
+    setSelectedPlatform("all");
+    setSelectedGroupId("all");
+    setSearchQuery("");
+  }, []);
+
+  const platformCounts = useMemo(() => {
+    const counts: Record<string, number> = { chatgpt: 0, claude: 0, gemini: 0 };
+    for (const n of nodes) {
+      const site = (n.chat?.site || n.tags[0] || "").toLowerCase();
+      if (site === "google" || site === "gemini") counts.gemini++;
+      else if (site === "claude") counts.claude++;
+      else if (site === "chatgpt") counts.chatgpt++;
+    }
+    return counts;
+  }, [nodes]);
+
+  const groupCounts = useMemo(() => {
+    const counts: Record<string, number> = { ungrouped: 0 };
+    for (const n of nodes) {
+      if (!n.groupId) counts.ungrouped++;
+      else counts[n.groupId] = (counts[n.groupId] || 0) + 1;
+    }
+    return counts;
+  }, [nodes]);
+
   const totalTokens = nodes.reduce((acc, curr) => acc + (curr.tokenEstimate || 0), 0);
 
   const parentOfSelected = selectedMergeNode?.parentId
@@ -410,42 +465,67 @@ export const App: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setSelectedGroupId("ungrouped")}
+            onClick={() => setSelectedGroupId(selectedGroupId === "ungrouped" ? "all" : "ungrouped")}
             className={`filter-pill-btn ${selectedGroupId === "ungrouped" ? "active" : ""}`}
           >
-            Ungrouped
+            Ungrouped {groupCounts.ungrouped > 0 ? `(${groupCounts.ungrouped})` : ""}
           </button>
 
-          {groups.map((g) => (
-            <div
-              key={g.id}
-              className={`group-chip-pill ${selectedGroupId === g.id ? "active" : ""}`}
-              onClick={() => setSelectedGroupId(g.id)}
-            >
-              <span>{g.name}</span>
-              <button
-                className="group-chip-remove-btn"
-                onClick={(e) => handleDeleteGroup(g.id, e)}
-                title="Delete group"
+          {groups.map((g) => {
+            const count = groupCounts[g.id] || 0;
+            return (
+              <div
+                key={g.id}
+                className={`group-chip-pill ${selectedGroupId === g.id ? "active" : ""}`}
+                onClick={() => setSelectedGroupId(selectedGroupId === g.id ? "all" : g.id)}
               >
-                &times;
-              </button>
-            </div>
-          ))}
+                <span>{g.name}</span>
+                {count > 0 && <span style={{ opacity: 0.7, fontSize: "9px", marginLeft: "2px" }}>({count})</span>}
+                <button
+                  className="group-chip-remove-btn"
+                  onClick={(e) => handleDeleteGroup(g.id, e)}
+                  title="Delete group"
+                >
+                  &times;
+                </button>
+              </div>
+            );
+          })}
         </div>
 
         {/* Platform filter pills */}
-        <div style={{ display: "flex", gap: "6px" }}>
-          {["all", "chatgpt", "claude", "gemini"].map((p) => (
+        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+          {["all", "chatgpt", "claude", "gemini"].map((p) => {
+            const count = p === "all" ? nodes.length : (platformCounts[p] || 0);
+            return (
+              <button
+                key={p}
+                onClick={() => setSelectedPlatform(selectedPlatform === p ? "all" : p)}
+                className={`filter-pill-btn ${selectedPlatform === p ? "active" : ""}`}
+                style={{ textTransform: "uppercase", fontFamily: "monospace", fontSize: "10px" }}
+              >
+                <span>{p}</span>
+                <span style={{ opacity: 0.65, fontSize: "9px" }}>({count})</span>
+              </button>
+            );
+          })}
+
+          {(selectedPlatform !== "all" || selectedGroupId !== "all" || searchQuery.trim()) && (
             <button
-              key={p}
-              onClick={() => setSelectedPlatform(p)}
-              className={`filter-pill-btn ${selectedPlatform === p ? "active" : ""}`}
-              style={{ textTransform: "uppercase", fontFamily: "monospace", fontSize: "10px" }}
+              onClick={handleResetFilters}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--fl-muted)",
+                fontSize: "11px",
+                cursor: "pointer",
+                textDecoration: "underline",
+                marginLeft: "auto",
+              }}
             >
-              {p}
+              Reset
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -474,6 +554,7 @@ export const App: React.FC = () => {
             onDeleteNode={handleDeleteNode}
             onAssignGroup={handleAssignGroup}
             onRenameNode={handleRenameNode}
+            onResetFilters={handleResetFilters}
           />
         ) : (
           <BranchTree

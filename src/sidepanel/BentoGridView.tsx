@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { BranchNode, BranchGroup, Site } from "../shared/types";
 import {
   ExternalLink,
@@ -11,6 +11,7 @@ import {
   Check,
   Pencil,
   X,
+  RotateCcw,
 } from "lucide-react";
 
 interface BentoGridViewProps {
@@ -25,6 +26,7 @@ interface BentoGridViewProps {
   onDeleteNode: (nodeId: string) => void;
   onAssignGroup: (nodeId: string, groupId: string | null) => void;
   onRenameNode: (nodeId: string, newLabel: string) => void;
+  onResetFilters?: () => void;
 }
 
 export const BentoGridView: React.FC<BentoGridViewProps> = ({
@@ -39,32 +41,62 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   onDeleteNode,
   onAssignGroup,
   onRenameNode,
+  onResetFilters,
 }) => {
   const [openGroupDropdownNodeId, setOpenGroupDropdownNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
 
-  const filteredNodes = nodes.filter((n) => {
-    const matchesSearch =
-      !searchQuery.trim() ||
-      n.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      n.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const matchesPlatform =
-      selectedPlatform === "all" ||
-      (n.chat?.site || n.tags[0]) === selectedPlatform;
-
-    const matchesGroup =
-      selectedGroupId === "all" ||
-      (selectedGroupId === "ungrouped" ? !n.groupId : n.groupId === selectedGroupId);
-
-    return matchesSearch && matchesPlatform && matchesGroup;
-  });
+  // Dismiss open group dropdown when clicking anywhere outside
+  useEffect(() => {
+    if (!openGroupDropdownNodeId) return;
+    const handleOutsideClick = () => setOpenGroupDropdownNodeId(null);
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, [openGroupDropdownNodeId]);
 
   const getGroupName = (groupId?: string | null) => {
     if (!groupId) return null;
     return groups.find((g) => g.id === groupId)?.name || null;
   };
+
+  const normalizePlatform = (site?: string) => {
+    if (!site) return "";
+    const s = site.toLowerCase().trim();
+    if (s === "google") return "gemini";
+    return s;
+  };
+
+  const filteredNodes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const targetPlatform = selectedPlatform.toLowerCase().trim();
+
+    return nodes.filter((n) => {
+      // Search matching across label, summary, tags, and chat title
+      const matchesSearch =
+        !q ||
+        n.label.toLowerCase().includes(q) ||
+        (n.summary || "").toLowerCase().includes(q) ||
+        (n.chat?.title || "").toLowerCase().includes(q) ||
+        (n.chat?.site || "").toLowerCase().includes(q) ||
+        n.tags.some((t) => t.toLowerCase().includes(q)) ||
+        (getGroupName(n.groupId) || "").toLowerCase().includes(q);
+
+      // Platform matching (normalizing google/gemini and checking tags + chat.site)
+      const nodeSite = normalizePlatform(n.chat?.site || n.tags[0]);
+      const matchesPlatform =
+        targetPlatform === "all" ||
+        nodeSite === targetPlatform ||
+        n.tags.some((t) => normalizePlatform(t) === targetPlatform);
+
+      // Group matching
+      const matchesGroup =
+        selectedGroupId === "all" ||
+        (selectedGroupId === "ungrouped" ? !n.groupId : n.groupId === selectedGroupId);
+
+      return matchesSearch && matchesPlatform && matchesGroup;
+    });
+  }, [nodes, searchQuery, selectedPlatform, selectedGroupId, groups]);
 
   const handleStartRename = (node: BranchNode, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -86,6 +118,11 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   };
 
   if (filteredNodes.length === 0) {
+    const hasActiveFilters =
+      searchQuery.trim().length > 0 ||
+      selectedPlatform !== "all" ||
+      selectedGroupId !== "all";
+
     return (
       <div
         style={{
@@ -102,11 +139,28 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
       >
         <MessageSquare size={32} style={{ marginBottom: "12px", opacity: 0.4 }} />
         <div style={{ fontSize: "14px", fontWeight: "600", color: "var(--fl-text)", marginBottom: "4px" }}>
-          No branches found
+          {hasActiveFilters ? "No branches match your filters" : "No branches found"}
         </div>
-        <div style={{ fontSize: "12px", color: "var(--fl-muted)" }}>
-          Try clearing your search query or group filter.
+        <div style={{ fontSize: "12px", color: "var(--fl-muted)", maxWidth: "260px" }}>
+          {hasActiveFilters
+            ? "Try resetting your search query, group, or platform filters."
+            : "No conversation branches created yet. Click Fork on any message to create a branch."}
         </div>
+        {hasActiveFilters && onResetFilters && (
+          <button
+            onClick={onResetFilters}
+            className="filter-pill-btn active"
+            style={{
+              marginTop: "14px",
+              padding: "6px 14px",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            <RotateCcw size={12} style={{ marginRight: "4px" }} />
+            Clear All Filters
+          </button>
+        )}
       </div>
     );
   }

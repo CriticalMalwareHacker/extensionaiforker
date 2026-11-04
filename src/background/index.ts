@@ -17,6 +17,7 @@ import {
 import { ExtensionMessage } from "../shared/types";
 import { nanoAvailable, nameBranchNano, summarizeNano } from "../ai/nano";
 import { summarizeRemote, nameBranchRemote } from "../ai/remote";
+import { isGeminiConfigured, summarizeWithGemini, nameBranchWithGemini } from "../ai/gemini";
 
 // Configure side panel to open on action click
 if (chrome.sidePanel?.setPanelBehavior) {
@@ -111,7 +112,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
           const settings = await getSettings();
           let summary: string | null = null;
 
-          if (settings.useGeminiNano && (await nanoAvailable())) {
+          if (await isGeminiConfigured(settings)) {
+            summary = await summarizeWithGemini(message.text, message.mode, settings);
+          }
+          if (!summary && settings.useGeminiNano && (await nanoAvailable())) {
             summary = await summarizeNano(message.text, message.mode);
           }
           if (!summary && settings.cloudProxyUrl) {
@@ -130,7 +134,10 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendRes
           const settings = await getSettings();
           let title: string | null = null;
 
-          if (settings.useGeminiNano && (await nanoAvailable())) {
+          if (await isGeminiConfigured(settings)) {
+            title = await nameBranchWithGemini(message.contextText, settings);
+          }
+          if (!title && settings.useGeminiNano && (await nanoAvailable())) {
             title = await nameBranchNano(message.contextText);
           }
           if (!title && settings.cloudProxyUrl) {

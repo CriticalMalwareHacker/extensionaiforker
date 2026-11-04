@@ -73,6 +73,8 @@ export interface ForklineSettings {
   primerTemplate: string;
   compactKeepRecent: number;
   useGeminiNano: boolean;
+  geminiApiKey?: string;
+  geminiModel?: string;
   cloudProxyUrl?: string;
   cloudProxyToken?: string;
 }

@@ -6,6 +6,7 @@ import { getAdapterForUrl, ADAPTERS } from "../adapters";
 import { db, findNodeByChat, getSettings, saveNode } from "./db";
 import { nanoAvailable, nameBranchNano, summarizeNano } from "../ai/nano";
 import { nameBranchRemote, summarizeRemote } from "../ai/remote";
+import { isGeminiConfigured, summarizeWithGemini, nameBranchWithGemini } from "../ai/gemini";
 
 // MV3 workers can be suspended between opening a tab and the content script
 // starting. Keep the hand-off in session storage instead of worker memory.
@@ -77,33 +78,23 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
   let summaryText: string | undefined = undefined;
   let activeMessages = messagesToFork;
 
-  // Perform compaction if requested (use fast fallback first to avoid blocking tab open)
+  // Perform compaction if requested (intelligently compress older turns with Gemini LLM or Nano)
   if (compaction === "summary") {
     const plan = prepareCompaction(messagesToFork, settings.compactKeepRecent);
     if (plan.olderMessages.length > 0) {
-      summaryText = fallbackSummarize(plan);
+      if (await isGeminiConfigured(settings)) {
+        const geminiSummary = await summarizeWithGemini(plan.textToSummarize, "compact", settings);
+        summaryText = geminiSummary || fallbackSummarize(plan);
+      } else if (settings.useGeminiNano && (await nanoAvailable())) {
+        const nanoSummary = await summarizeNano(plan.textToSummarize, "compact");
+        summaryText = nanoSummary || fallbackSummarize(plan);
+      } else if (settings.cloudProxyUrl) {
+        const remoteSummary = await summarizeRemote(plan.textToSummarize, "compact", settings);
+        summaryText = remoteSummary || fallbackSummarize(plan);
+      } else {
+        summaryText = fallbackSummarize(plan);
+      }
       activeMessages = plan.recentMessages;
-
-      // Asynchronously refine summary in background if AI is available
-      (async () => {
-        try {
-          let refinedSummary: string | null = null;
-          if (settings.useGeminiNano && (await nanoAvailable())) {
-            refinedSummary = await summarizeNano(plan.textToSummarize, "compact");
-          } else if (settings.cloudProxyUrl) {
-            refinedSummary = await summarizeRemote(plan.textToSummarize, "compact", settings);
-          }
-          if (refinedSummary) {
-            for (const id of createdNodeIds) {
-              const n = await db.nodes.get(id);
-              if (n) {
-                n.summary = refinedSummary;
-                await saveNode(n);
-              }
-            }
-          }
-        } catch {}
-      })();
     }
   }
 
@@ -169,7 +160,9 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
     (async () => {
       try {
         let aiTitle: string | null = null;
-        if (settings.useGeminiNano && (await nanoAvailable())) {
+        if (await isGeminiConfigured(settings)) {
+          aiTitle = await nameBranchWithGemini(contextText, settings);
+        } else if (settings.useGeminiNano && (await nanoAvailable())) {
           aiTitle = await nameBranchNano(contextText);
         } else if (settings.cloudProxyUrl) {
           aiTitle = await nameBranchRemote(contextText, settings);

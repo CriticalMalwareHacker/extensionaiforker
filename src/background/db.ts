@@ -30,6 +30,8 @@ export const DEFAULT_SETTINGS: ForklineSettings = {
   primerTemplate: DEFAULT_PRIMER_TEMPLATE,
   compactKeepRecent: 6,
   useGeminiNano: true,
+  geminiApiKey: (typeof process !== "undefined" && (process.env?.GEMINI_API_KEY || process.env?.VITE_GEMINI_API_KEY)) || "",
+  geminiModel: (typeof process !== "undefined" && (process.env?.GEMINI_MODEL || process.env?.VITE_GEMINI_MODEL)) || "gemini-2.0-flash",
   cloudProxyUrl: "",
   cloudProxyToken: "",
 };
@@ -43,6 +45,8 @@ export async function getSettings(): Promise<ForklineSettings> {
       primerTemplate: map.get("primerTemplate") ?? DEFAULT_SETTINGS.primerTemplate,
       compactKeepRecent: map.get("compactKeepRecent") ?? DEFAULT_SETTINGS.compactKeepRecent,
       useGeminiNano: map.get("useGeminiNano") ?? DEFAULT_SETTINGS.useGeminiNano,
+      geminiApiKey: map.get("geminiApiKey") ?? DEFAULT_SETTINGS.geminiApiKey,
+      geminiModel: map.get("geminiModel") ?? DEFAULT_SETTINGS.geminiModel,
       cloudProxyUrl: map.get("cloudProxyUrl") ?? DEFAULT_SETTINGS.cloudProxyUrl,
       cloudProxyToken: map.get("cloudProxyToken") ?? DEFAULT_SETTINGS.cloudProxyToken,
     };

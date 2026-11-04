@@ -154,15 +154,21 @@ export function injectForkButtons(
 
     // Keep the control anchored to its own message. Page-level toolbars are
     // unstable across providers and can include the prompt composer.
-    const isUser = el.tagName.toLowerCase().includes("user") || el.getAttribute("data-message-author-role") === "user";
+    const isUser =
+      el.tagName.toLowerCase().includes("user") ||
+      el.getAttribute("data-message-author-role") === "user" ||
+      Boolean(el.matches?.('[data-testid="user-message"], div.font-user-message, div[class*="font-user"], div.human-message, [data-testid*="user"]')) ||
+      Boolean(el.querySelector?.('[data-testid="user-message"], div.font-user-message'));
+
     const inlineRow = document.createElement("div");
     inlineRow.className = "forkline-inline-row";
     Object.assign(inlineRow.style, {
       display: "flex",
       justifyContent: isUser ? "flex-end" : "flex-start",
+      flexBasis: "100%",
+      width: "100%",
       marginTop: "8px",
       marginBottom: "4px",
-      width: "100%",
       clear: "both",
     });
     inlineRow.appendChild(btnContainer);

@@ -74,6 +74,33 @@ describe("Site Adapters", () => {
       expect(msg1.codeBlocks?.length).toBe(1);
       expect(msg1.codeBlocks?.[0].code).toContain("class LRUCache");
     });
+
+    it("extracts modern Claude DOM with font-claude-response and assistant-message", () => {
+      document.body.innerHTML = `
+        <div data-testid="chat-scroll-container">
+          <div data-testid="user-message" class="font-user-message">
+            <div>Explain Redis streams</div>
+          </div>
+          <div class="font-claude-response" data-testid="assistant-message">
+            <div class="progressive-markdown">
+              <div>Redis streams provide an append-only log data structure.</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const elements = adapter.getMessageElements();
+      // Should filter out nested progressive-markdown and only have 2 top-level turns
+      expect(elements.length).toBe(2);
+
+      const userTurn = adapter.readMessage(elements[0], 0);
+      expect(userTurn.role).toBe("user");
+      expect(userTurn.text).toContain("Redis streams");
+
+      const assistantTurn = adapter.readMessage(elements[1], 1);
+      expect(assistantTurn.role).toBe("assistant");
+      expect(assistantTurn.text).toContain("append-only log");
+    });
   });
 
   describe("GeminiAdapter", () => {

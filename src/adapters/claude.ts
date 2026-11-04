@@ -2,14 +2,29 @@ import { SiteAdapter } from "./types";
 import { Message, Site } from "../shared/types";
 
 const SELECTORS = {
-  messageGroup: "[data-testid=\"user-message\"], div.font-claude-message, div[data-testid*=\"chat-message\"]",
-  userMessage: "[data-testid=\"user-message\"], div.font-user-message",
-  assistantMessage: "div.font-claude-message, [data-testid=\"assistant-message\"]",
+  messageGroup: [
+    '[data-testid="user-message"]',
+    'div.font-user-message',
+    'div[class*="font-user"]',
+    'div.human-message',
+    'div.font-claude-response',
+    'div.font-claude-message',
+    'div[class*="font-claude"]',
+    '[data-testid="assistant-message"]',
+    '[data-testid*="assistant"]',
+    'div.assistant-message',
+    'div.progressive-markdown',
+    'div[data-is-streaming]',
+  ].join(", "),
+  userMessage:
+    '[data-testid="user-message"], div.font-user-message, div[class*="font-user"], div.human-message, [data-testid*="user"]',
+  assistantMessage:
+    'div.font-claude-response, div.font-claude-message, div[class*="font-claude"], [data-testid="assistant-message"], [data-testid*="assistant"], div.assistant-message, div.progressive-markdown, div[data-is-streaming]',
   codeBlock: "pre, .code-block",
-  attachments: "[data-testid*=\"attachment\"], [aria-label*=\"attachment\" i], .file-thumbnail, img",
-  inputBox: "div.ProseMirror[contenteditable=\"true\"], div[contenteditable=\"true\"], textarea",
-  chatContainer: "main, [role=\"main\"], div[data-testid=\"chat-scroll-container\"]",
-  title: "title, header h1, [data-testid=\"chat-title\"]",
+  attachments: '[data-testid*="attachment"], [aria-label*="attachment" i], .file-thumbnail, img',
+  inputBox: 'div.ProseMirror[contenteditable="true"], div[contenteditable="true"], textarea',
+  chatContainer: 'main, [role="main"], div[data-testid="chat-scroll-container"]',
+  title: 'title, header h1, [data-testid="chat-title"]',
 };
 
 export class ClaudeAdapter implements SiteAdapter {
@@ -25,8 +40,19 @@ export class ClaudeAdapter implements SiteAdapter {
   }
 
   getMessageElements(): HTMLElement[] {
-    const list = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageGroup));
-    return list;
+    const rawList = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageGroup));
+    if (rawList.length === 0) return [];
+
+    // Filter out nested duplicates (e.g. progressive-markdown inside font-claude-response)
+    const topTurns: HTMLElement[] = [];
+    for (const el of rawList) {
+      const hasParentTurn = rawList.some((other) => other !== el && other.contains(el));
+      if (!hasParentTurn) {
+        topTurns.push(el);
+      }
+    }
+
+    return topTurns.length > 0 ? topTurns : rawList;
   }
 
   readMessage(el: HTMLElement, index: number): Message {
@@ -57,7 +83,11 @@ export class ClaudeAdapter implements SiteAdapter {
     });
 
     const hasAttachments = el.querySelectorAll(SELECTORS.attachments).length > 0;
-    const text = el.innerText || el.textContent || "";
+
+    // Clean text by cloning and stripping out any injected forkline buttons
+    const clone = el.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll(".forkline-btn-wrapper, .forkline-inline-row, .forkline-action-btn").forEach((b) => b.remove());
+    const text = clone.innerText || clone.textContent || "";
 
     return {
       index,

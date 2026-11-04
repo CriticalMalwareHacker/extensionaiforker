@@ -18,31 +18,56 @@ interface BentoGridViewProps {
   nodes: BranchNode[];
   groups: BranchGroup[];
   activeChatUrl?: string | null;
-  searchQuery: string;
-  selectedPlatform: string;
-  selectedGroupId: string;
-  onSelectNode: (node: BranchNode) => void;
-  onMergeNode: (node: BranchNode) => void;
-  onDeleteNode: (nodeId: string) => void;
-  onAssignGroup: (nodeId: string, groupId: string | null) => void;
-  onRenameNode: (nodeId: string, newLabel: string) => void;
+  searchQuery?: string;
+  selectedPlatform?: string;
+  selectedGroupId?: string;
+  onSelectNode?: (node: BranchNode) => void;
+  onOpenBranch?: (node: BranchNode) => void;
+  onMergeNode?: (node: BranchNode) => void;
+  onStartMerge?: (node: BranchNode) => void;
+  onDeleteNode?: (nodeId: string) => void;
+  onAssignGroup?: (nodeId: string, groupId: string | null) => void;
+  onRenameNode?: (nodeId: string, newLabel: string) => void;
   onResetFilters?: () => void;
 }
 
 export const BentoGridView: React.FC<BentoGridViewProps> = ({
-  nodes,
-  groups,
+  nodes = [],
+  groups = [],
   activeChatUrl,
-  searchQuery,
-  selectedPlatform,
-  selectedGroupId,
+  searchQuery = "",
+  selectedPlatform = "all",
+  selectedGroupId = "all",
   onSelectNode,
+  onOpenBranch,
   onMergeNode,
+  onStartMerge,
   onDeleteNode,
   onAssignGroup,
   onRenameNode,
   onResetFilters,
 }) => {
+  const selectHandler = (node: BranchNode) => {
+    if (onSelectNode) onSelectNode(node);
+    else if (onOpenBranch) onOpenBranch(node);
+  };
+
+  const mergeHandler = (node: BranchNode) => {
+    if (onMergeNode) onMergeNode(node);
+    else if (onStartMerge) onStartMerge(node);
+  };
+
+  const deleteHandler = (nodeId: string) => {
+    if (onDeleteNode) onDeleteNode(nodeId);
+  };
+
+  const assignGroupHandler = (nodeId: string, groupId: string | null) => {
+    if (onAssignGroup) onAssignGroup(nodeId, groupId);
+  };
+
+  const renameHandler = (nodeId: string, newLabel: string) => {
+    if (onRenameNode) onRenameNode(nodeId, newLabel);
+  };
   const [openGroupDropdownNodeId, setOpenGroupDropdownNodeId] = useState<string | null>(null);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
@@ -68,29 +93,38 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   };
 
   const filteredNodes = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const targetPlatform = selectedPlatform.toLowerCase().trim();
+    const q = (searchQuery || "").trim().toLowerCase();
+    const targetPlatform = (selectedPlatform || "all").toLowerCase().trim();
 
-    return nodes.filter((n) => {
+    return (nodes || []).filter((n) => {
+      if (!n) return false;
+      const label = (n.label || "").toLowerCase();
+      const summary = (n.summary || "").toLowerCase();
+      const chatTitle = (n.chat?.title || "").toLowerCase();
+      const chatSite = (n.chat?.site || "").toLowerCase();
+      const tags = Array.isArray(n.tags) ? n.tags : [];
+      const nodeSite = normalizePlatform(n.chat?.site || tags[0]);
+      const groupName = (getGroupName(n.groupId) || "").toLowerCase();
+
       // Search matching across label, summary, tags, and chat title
       const matchesSearch =
         !q ||
-        n.label.toLowerCase().includes(q) ||
-        (n.summary || "").toLowerCase().includes(q) ||
-        (n.chat?.title || "").toLowerCase().includes(q) ||
-        (n.chat?.site || "").toLowerCase().includes(q) ||
-        n.tags.some((t) => t.toLowerCase().includes(q)) ||
-        (getGroupName(n.groupId) || "").toLowerCase().includes(q);
+        label.includes(q) ||
+        summary.includes(q) ||
+        chatTitle.includes(q) ||
+        chatSite.includes(q) ||
+        tags.some((t) => (t || "").toLowerCase().includes(q)) ||
+        groupName.includes(q);
 
       // Platform matching (normalizing google/gemini and checking tags + chat.site)
-      const nodeSite = normalizePlatform(n.chat?.site || n.tags[0]);
       const matchesPlatform =
         targetPlatform === "all" ||
         nodeSite === targetPlatform ||
-        n.tags.some((t) => normalizePlatform(t) === targetPlatform);
+        tags.some((t) => normalizePlatform(t) === targetPlatform);
 
       // Group matching
       const matchesGroup =
+        !selectedGroupId ||
         selectedGroupId === "all" ||
         (selectedGroupId === "ungrouped" ? !n.groupId : n.groupId === selectedGroupId);
 
@@ -101,13 +135,13 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   const handleStartRename = (node: BranchNode, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingNodeId(node.id);
-    setEditingLabel(node.label);
+    setEditingLabel(node.label || "");
   };
 
   const handleSaveRename = (nodeId: string, e?: React.MouseEvent | React.KeyboardEvent) => {
     e?.stopPropagation();
     if (editingLabel.trim()) {
-      onRenameNode(nodeId, editingLabel.trim());
+      renameHandler(nodeId, editingLabel.trim());
     }
     setEditingNodeId(null);
   };
@@ -191,7 +225,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
             key={node.id}
             className="branch-card"
             data-active={isCurrentTab ? "true" : "false"}
-            onClick={() => onSelectNode(node)}
+            onClick={() => selectHandler(node)}
           >
             {/* Top Row: Platform badge + Group badge + token */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -274,7 +308,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                       </div>
                       <button
                         onClick={() => {
-                          onAssignGroup(node.id, null);
+                          assignGroupHandler(node.id, null);
                           setOpenGroupDropdownNodeId(null);
                         }}
                         style={{
@@ -303,7 +337,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                         <button
                           key={g.id}
                           onClick={() => {
-                            onAssignGroup(node.id, g.id);
+                            assignGroupHandler(node.id, g.id);
                             setOpenGroupDropdownNodeId(null);
                           }}
                           style={{
@@ -359,7 +393,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                     <Cpu size={12} />
                   </span>
                 )}
-                <span>~{node.tokenEstimate.toLocaleString()} tkn</span>
+                <span>~{(node.tokenEstimate || 0).toLocaleString()} tkn</span>
                 <span>{new Date(node.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
               </div>
             </div>
@@ -487,7 +521,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => onSelectNode(node)}
+                onClick={() => selectHandler(node)}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -512,7 +546,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                 {!node.isMerged && (
                   <button
-                    onClick={() => onMergeNode(node)}
+                    onClick={() => mergeHandler(node)}
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
@@ -536,7 +570,7 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
                 )}
 
                 <button
-                  onClick={() => onDeleteNode(node.id)}
+                  onClick={() => deleteHandler(node.id)}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",

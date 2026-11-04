@@ -12,51 +12,137 @@ import ReactFlow, {
   addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { BranchNode } from "../shared/types";
+import { BranchNode, BranchGroup } from "../shared/types";
 import { BranchNodeComponent } from "./BranchNodeComponent";
-import { GitBranch } from "lucide-react";
+import { GitBranch, RotateCcw } from "lucide-react";
 
 const nodeTypes = {
   branchNode: BranchNodeComponent,
 };
 
-interface BranchTreeProps {
+export interface BranchTreeProps {
   nodes: BranchNode[];
+  groups?: BranchGroup[];
   activeChatUrl?: string | null;
-  searchQuery: string;
-  onSelectNode: (node: BranchNode) => void;
-  onMergeNode: (node: BranchNode) => void;
-  onDeleteNode: (nodeId: string) => void;
+  searchQuery?: string;
+  selectedPlatform?: string;
+  selectedGroupId?: string;
+  onSelectNode?: (node: BranchNode) => void;
+  onNodeClick?: (node: BranchNode) => void;
+  onOpenBranch?: (node: BranchNode) => void;
+  onMergeNode?: (node: BranchNode) => void;
+  onStartMerge?: (node: BranchNode) => void;
+  onDeleteNode?: (nodeId: string) => void;
   onLinkNodes?: (sourceId: string, targetId: string) => void;
   onRenameNode?: (nodeId: string, newLabel: string) => void;
+  onResetFilters?: () => void;
 }
 
 export const BranchTree: React.FC<BranchTreeProps> = ({
-  nodes,
+  nodes = [],
+  groups = [],
   activeChatUrl,
-  searchQuery,
+  searchQuery = "",
+  selectedPlatform = "all",
+  selectedGroupId = "all",
   onSelectNode,
+  onNodeClick,
+  onOpenBranch,
   onMergeNode,
+  onStartMerge,
   onDeleteNode,
   onLinkNodes,
   onRenameNode,
+  onResetFilters,
 }) => {
+  const selectHandler = useCallback(
+    (node: BranchNode) => {
+      if (onSelectNode) onSelectNode(node);
+      else if (onNodeClick) onNodeClick(node);
+      else if (onOpenBranch) onOpenBranch(node);
+    },
+    [onSelectNode, onNodeClick, onOpenBranch]
+  );
+
+  const mergeHandler = useCallback(
+    (node: BranchNode) => {
+      if (onMergeNode) onMergeNode(node);
+      else if (onStartMerge) onStartMerge(node);
+    },
+    [onMergeNode, onStartMerge]
+  );
+
+  const deleteHandler = useCallback(
+    (nodeId: string) => {
+      if (onDeleteNode) onDeleteNode(nodeId);
+    },
+    [onDeleteNode]
+  );
+
+  const renameHandler = useCallback(
+    (nodeId: string, newLabel: string) => {
+      if (onRenameNode) onRenameNode(nodeId, newLabel);
+    },
+    [onRenameNode]
+  );
+
+  const normalizePlatform = (site?: string) => {
+    if (!site) return "";
+    const s = site.toLowerCase().trim();
+    if (s === "google") return "gemini";
+    return s;
+  };
+
+  const getGroupName = useCallback(
+    (groupId?: string | null) => {
+      if (!groupId) return null;
+      return (groups || []).find((g) => g.id === groupId)?.name || null;
+    },
+    [groups]
+  );
+
   const filteredNodes = useMemo(() => {
-    if (!searchQuery.trim()) return nodes;
-    const q = searchQuery.toLowerCase();
-    return nodes.filter(
-      (n) =>
-        n.label.toLowerCase().includes(q) ||
-        n.tags.some((t) => t.toLowerCase().includes(q)) ||
-        n.chat?.site.toLowerCase().includes(q)
-    );
-  }, [nodes, searchQuery]);
+    const q = (searchQuery || "").trim().toLowerCase();
+    const targetPlatform = (selectedPlatform || "all").toLowerCase().trim();
+
+    return (nodes || []).filter((n) => {
+      if (!n) return false;
+      const label = (n.label || "").toLowerCase();
+      const summary = (n.summary || "").toLowerCase();
+      const chatTitle = (n.chat?.title || "").toLowerCase();
+      const tags = Array.isArray(n.tags) ? n.tags : [];
+      const nodeSite = normalizePlatform(n.chat?.site || tags[0]);
+      const groupName = (getGroupName(n.groupId) || "").toLowerCase();
+
+      const matchesSearch =
+        !q ||
+        label.includes(q) ||
+        summary.includes(q) ||
+        chatTitle.includes(q) ||
+        nodeSite.includes(q) ||
+        tags.some((t) => (t || "").toLowerCase().includes(q)) ||
+        groupName.includes(q);
+
+      const matchesPlatform =
+        targetPlatform === "all" ||
+        nodeSite === targetPlatform ||
+        tags.some((t) => normalizePlatform(t) === targetPlatform);
+
+      const matchesGroup =
+        !selectedGroupId ||
+        selectedGroupId === "all" ||
+        (selectedGroupId === "ungrouped" ? !n.groupId : n.groupId === selectedGroupId);
+
+      return matchesSearch && matchesPlatform && matchesGroup;
+    });
+  }, [nodes, searchQuery, selectedPlatform, selectedGroupId, getGroupName]);
 
   const { initialNodes, initialEdges } = useMemo(() => {
-    const nodeMap = new Map(filteredNodes.map((n) => [n.id, n]));
+    const safeNodes = filteredNodes || [];
+    const nodeMap = new Map(safeNodes.map((n) => [n.id, n]));
     const childrenMap = new Map<string, string[]>();
 
-    for (const node of filteredNodes) {
+    for (const node of safeNodes) {
       if (node.parentId && nodeMap.has(node.parentId)) {
         const list = childrenMap.get(node.parentId) || [];
         list.push(node.id);
@@ -64,9 +150,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
       }
     }
 
-    const rootNodes = filteredNodes.filter(
-      (n) => !n.parentId || !nodeMap.has(n.parentId)
-    );
+    const rootNodes = safeNodes.filter((n) => !n.parentId || !nodeMap.has(n.parentId));
 
     const positions = new Map<string, { x: number; y: number }>();
     let currentX = 40;
@@ -101,7 +185,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
       currentX += 80;
     }
 
-    const initialNodes: Node[] = filteredNodes.map((n) => {
+    const initialNodes: Node[] = safeNodes.map((n) => {
       const pos = positions.get(n.id) || { x: 40, y: 40 };
       const isCurrentTab = Boolean(
         activeChatUrl && n.chat?.url && activeChatUrl.includes(n.chat.conversationId)
@@ -115,23 +199,23 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         data: {
           node: n,
           isCurrentTab,
-          onSelect: onSelectNode,
-          onMerge: onMergeNode,
-          onDelete: onDeleteNode,
-          onRename: onRenameNode,
+          onSelect: selectHandler,
+          onMerge: mergeHandler,
+          onDelete: deleteHandler,
+          onRename: renameHandler,
         },
       };
     });
 
     const initialEdges: Edge[] = [];
-    for (const node of filteredNodes) {
+    for (const node of safeNodes) {
       if (node.parentId && nodeMap.has(node.parentId)) {
         initialEdges.push({
           id: `e-${node.parentId}-${node.id}`,
           source: node.parentId,
           target: node.id,
           type: ConnectionLineType.SmoothStep,
-          animated: node.isMerged,
+          animated: Boolean(node.isMerged),
           style: {
             stroke: node.isMerged ? "#ffffff" : "#71717a",
             strokeWidth: node.isMerged ? 2 : 1.5,
@@ -141,7 +225,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
     }
 
     return { initialNodes, initialEdges };
-  }, [filteredNodes, activeChatUrl, onSelectNode, onMergeNode, onDeleteNode, onRenameNode]);
+  }, [filteredNodes, activeChatUrl, selectHandler, mergeHandler, deleteHandler, renameHandler]);
 
   const [flowNodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [flowEdges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -169,6 +253,11 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
     },
     [setEdges, onLinkNodes]
   );
+
+  const hasActiveFilters =
+    (searchQuery || "").trim().length > 0 ||
+    selectedPlatform !== "all" ||
+    selectedGroupId !== "all";
 
   if (filteredNodes.length === 0) {
     return (
@@ -211,7 +300,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
             letterSpacing: "-0.2px",
           }}
         >
-          No branches yet
+          {hasActiveFilters ? "No branches match your filters" : "No branches yet"}
         </div>
         <div
           style={{
@@ -221,8 +310,28 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
             lineHeight: "1.5",
           }}
         >
-          Open ChatGPT, Claude, or Gemini and click <b>Fork</b> on any message to start branching.
+          {hasActiveFilters
+            ? "Try resetting your search query, group, or platform filters."
+            : "Open ChatGPT, Claude, or Gemini and click Fork on any message to start branching."}
         </div>
+        {hasActiveFilters && onResetFilters && (
+          <button
+            onClick={onResetFilters}
+            className="filter-pill-btn active"
+            style={{
+              marginTop: "14px",
+              padding: "6px 14px",
+              fontSize: "12px",
+              cursor: "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <RotateCcw size={12} />
+            Clear All Filters
+          </button>
+        )}
       </div>
     );
   }

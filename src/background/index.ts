@@ -26,6 +26,17 @@ if (chrome.sidePanel?.setPanelBehavior) {
   });
 }
 
+// Fallback action click listener in case setPanelBehavior is not supported or fails
+chrome.action?.onClicked?.addListener(async (tab) => {
+  if (chrome.sidePanel?.open && tab.windowId) {
+    try {
+      await chrome.sidePanel.open({ windowId: tab.windowId });
+    } catch (err) {
+      console.debug("[Forkline ServiceWorker] action.onClicked open sidePanel:", err);
+    }
+  }
+});
+
 chrome.runtime.onMessage.addListener((message: ExtensionMessage, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) {
     sendResponse({ error: "Unauthorized message sender" });

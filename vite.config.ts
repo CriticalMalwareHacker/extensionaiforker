@@ -61,10 +61,12 @@ export default defineConfig(({ mode }) => {
             fs.cpSync(publicDir, distDir, { recursive: true });
           }
 
-          // Ensure sidepanel.html is at root of dist/
+          // Ensure sidepanel.html is at root of dist/ with valid asset paths
           const srcHtml = path.join(distDir, "src/sidepanel/index.html");
           if (fs.existsSync(srcHtml)) {
-            fs.copyFileSync(srcHtml, path.join(distDir, "sidepanel.html"));
+            let htmlContent = fs.readFileSync(srcHtml, "utf-8");
+            htmlContent = htmlContent.replace(/\.\.\/\.\.\/assets\//g, "./assets/");
+            fs.writeFileSync(path.join(distDir, "sidepanel.html"), htmlContent);
           }
         },
       },

@@ -7,9 +7,9 @@ interface NodeProps {
   data: {
     node: BranchNode;
     isCurrentTab: boolean;
-    onSelect: (node: BranchNode) => void;
-    onMerge: (node: BranchNode) => void;
-    onDelete: (nodeId: string) => void;
+    onSelect?: (node: BranchNode) => void;
+    onMerge?: (node: BranchNode) => void;
+    onDelete?: (nodeId: string) => void;
     onRename?: (nodeId: string, newLabel: string) => void;
   };
 }
@@ -123,7 +123,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
             </span>
           )}
           <span style={{ fontSize: "11px", color: "var(--fl-muted, #9a9a9a)", fontWeight: "500" }}>
-            ~{node.tokenEstimate.toLocaleString()} tkn
+            ~{(node.tokenEstimate || 0).toLocaleString()} tkn
           </span>
         </div>
       </div>
@@ -264,7 +264,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         }}
       >
         <button
-          onClick={() => onSelect(node)}
+          onClick={() => onSelect?.(node)}
           className="nodrag nopan"
           style={{
             display: "inline-flex",
@@ -287,7 +287,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
         <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
           {!node.isMerged && (
             <button
-              onClick={() => onMerge(node)}
+              onClick={() => onMerge?.(node)}
               className="nodrag nopan"
               style={{
                 display: "inline-flex",
@@ -309,7 +309,7 @@ export const BranchNodeComponent = memo(({ data }: NodeProps) => {
           )}
 
           <button
-            onClick={() => onDelete(node.id)}
+            onClick={() => onDelete?.(node.id)}
             className="nodrag nopan"
             style={{
               display: "inline-flex",

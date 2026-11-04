@@ -295,8 +295,9 @@ export const App: React.FC = () => {
 
   const platformCounts = useMemo(() => {
     const counts: Record<string, number> = { chatgpt: 0, claude: 0, gemini: 0 };
-    for (const n of nodes) {
-      const site = (n.chat?.site || n.tags[0] || "").toLowerCase();
+    for (const n of (nodes || [])) {
+      if (!n) continue;
+      const site = (n.chat?.site || (n.tags && n.tags[0]) || "").toLowerCase();
       if (site === "google" || site === "gemini") counts.gemini++;
       else if (site === "claude") counts.claude++;
       else if (site === "chatgpt") counts.chatgpt++;
@@ -306,26 +307,29 @@ export const App: React.FC = () => {
 
   const groupCounts = useMemo(() => {
     const counts: Record<string, number> = { ungrouped: 0 };
-    for (const n of nodes) {
+    for (const n of (nodes || [])) {
+      if (!n) continue;
       if (!n.groupId) counts.ungrouped++;
       else counts[n.groupId] = (counts[n.groupId] || 0) + 1;
     }
     return counts;
   }, [nodes]);
 
-  const totalTokens = nodes.reduce((acc, curr) => acc + (curr.tokenEstimate || 0), 0);
+  const totalTokens = (nodes || []).reduce((acc, curr) => acc + (curr?.tokenEstimate || 0), 0);
 
   const parentOfSelected = selectedMergeNode?.parentId
-    ? nodes.find((n) => n.id === selectedMergeNode.parentId) || null
+    ? (nodes || []).find((n) => n.id === selectedMergeNode.parentId) || null
     : null;
 
   // Filtered nodes for the search popup preview
-  const searchPopupResults = nodes.filter((n) => {
+  const searchPopupResults = (nodes || []).filter((n) => {
+    if (!n) return false;
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
+    const tags = Array.isArray(n.tags) ? n.tags : [];
     return (
-      n.label.toLowerCase().includes(q) ||
-      n.tags.some((t) => t.toLowerCase().includes(q)) ||
+      (n.label || "").toLowerCase().includes(q) ||
+      tags.some((t) => (t || "").toLowerCase().includes(q)) ||
       (n.chat?.site || "").toLowerCase().includes(q)
     );
   });
@@ -550,7 +554,9 @@ export const App: React.FC = () => {
             selectedPlatform={selectedPlatform}
             selectedGroupId={selectedGroupId}
             onSelectNode={handleSelectNode}
+            onOpenBranch={handleSelectNode}
             onMergeNode={handleStartMerge}
+            onStartMerge={handleStartMerge}
             onDeleteNode={handleDeleteNode}
             onAssignGroup={handleAssignGroup}
             onRenameNode={handleRenameNode}
@@ -559,13 +565,20 @@ export const App: React.FC = () => {
         ) : (
           <BranchTree
             nodes={nodes}
+            groups={groups}
             activeChatUrl={activeChatUrl}
             searchQuery={searchQuery}
+            selectedPlatform={selectedPlatform}
+            selectedGroupId={selectedGroupId}
             onSelectNode={handleSelectNode}
+            onNodeClick={handleSelectNode}
+            onOpenBranch={handleSelectNode}
             onMergeNode={handleStartMerge}
+            onStartMerge={handleStartMerge}
             onDeleteNode={handleDeleteNode}
             onLinkNodes={handleLinkNodes}
             onRenameNode={handleRenameNode}
+            onResetFilters={handleResetFilters}
           />
         )}
 

@@ -179,24 +179,25 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          color: "#71717a",
+          color: "var(--fl-muted)",
           textAlign: "center",
           padding: "32px 24px",
           fontFamily: "'Inter', sans-serif",
+          background: "var(--fl-canvas)",
         }}
       >
         <div
           style={{
             width: "44px",
             height: "44px",
-            borderRadius: "8px",
-            border: "1px solid #27272a",
-            backgroundColor: "#09090b",
+            borderRadius: "12px",
+            border: "1px solid var(--fl-border)",
+            backgroundColor: "var(--fl-surface)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: "16px",
-            color: "#fafafa",
+            color: "var(--fl-text)",
           }}
         >
           <GitBranch size={20} />
@@ -204,8 +205,8 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         <div
           style={{
             fontSize: "14px",
-            fontWeight: "600",
-            color: "#fafafa",
+            fontWeight: "650",
+            color: "var(--fl-text)",
             marginBottom: "6px",
             letterSpacing: "-0.2px",
           }}
@@ -215,7 +216,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
         <div
           style={{
             fontSize: "12px",
-            color: "#71717a",
+            color: "var(--fl-muted)",
             maxWidth: "260px",
             lineHeight: "1.5",
           }}
@@ -227,7 +228,7 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", background: "#000000" }}>
+    <div style={{ width: "100%", height: "100%", background: "var(--fl-canvas)" }}>
       <ReactFlow
         nodes={flowNodes}
         edges={flowEdges}
@@ -244,14 +245,14 @@ export const BranchTree: React.FC<BranchTreeProps> = ({
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="#1c1c1f"
+          color="var(--fl-border)"
         />
         <Controls
           style={{
-            background: "#09090b",
-            border: "1px solid #27272a",
-            borderRadius: "6px",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.7)",
+            background: "var(--fl-surface)",
+            border: "1px solid var(--fl-border)",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px var(--fl-shadow)",
           }}
         />
       </ReactFlow>

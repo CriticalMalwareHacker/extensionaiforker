@@ -57,6 +57,31 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     overflow: "hidden",
   });
 
+  const cleanup = () => {
+    backdrop.remove();
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      cleanup();
+      onCancel();
+    }
+  };
+  window.addEventListener("keydown", handleKeyDown);
+
+  // Close when clicking outside modal
+  backdrop.addEventListener("click", (e) => {
+    if (e.target === backdrop) {
+      cleanup();
+      onCancel();
+    }
+  });
+
+  modal.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
   const calculateCurrentTokens = () => {
     const included = availableMessages.filter((m) => !excludedSet.has(m.index));
     const rawText = included.map((m) => m.text).join("\n\n");
@@ -178,12 +203,12 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     `;
 
     modal.querySelector("#modal-close-btn")?.addEventListener("click", () => {
-      backdrop.remove();
+      cleanup();
       onCancel();
     });
 
     modal.querySelector("#modal-cancel-btn")?.addEventListener("click", () => {
-      backdrop.remove();
+      cleanup();
       onCancel();
     });
 
@@ -223,7 +248,7 @@ export function openSelectiveForkModal(options: ModalOptions): void {
     });
 
     modal.querySelector("#modal-fork-btn")?.addEventListener("click", () => {
-      backdrop.remove();
+      cleanup();
       onConfirm({
         excludedIndexes: Array.from(excludedSet),
         compaction,

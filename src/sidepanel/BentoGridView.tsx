@@ -112,7 +112,17 @@ export const BentoGridView: React.FC<BentoGridViewProps> = ({
   }
 
   return (
-    <div className="branch-grid" style={{ paddingBottom: "70px" }}>
+    <div
+      className="branch-grid"
+      style={{
+        flex: "1 1 0%",
+        height: "100%",
+        maxHeight: "100%",
+        overflowY: "auto",
+        minHeight: 0,
+        paddingBottom: "80px",
+      }}
+    >
       {filteredNodes.map((node) => {
         const site = (node.chat?.site || node.tags?.[0] || "chatgpt") as Site;
         const isCurrentTab = Boolean(

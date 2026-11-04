@@ -450,7 +450,17 @@ export const App: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      <div
+        style={{
+          flex: "1 1 0%",
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          height: "100%",
+        }}
+      >
         {viewMode === "bento" ? (
           <BentoGridView
             nodes={nodes}

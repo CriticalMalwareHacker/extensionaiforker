@@ -142,6 +142,7 @@ export function injectForkButtons(
             excludedIndexes: modalOpts.excludedIndexes,
             compaction: modalOpts.compaction,
             targetSites: modalOpts.targetSites,
+            label: modalOpts.customLabel,
           });
         },
         onCancel: () => {},

@@ -21,6 +21,29 @@ async function savePendingPayload(tabId: number, payload: ForkPayload): Promise<
   });
 }
 
+function generateCleanFallbackTitle(messages: { role: string; text?: string }[], forkedAtIndex: number): string {
+  const userMsgs = messages.filter((m) => m.role === "user");
+  const targetMsg = userMsgs[userMsgs.length - 1] || messages[messages.length - 1];
+  if (!targetMsg || !targetMsg.text?.trim()) {
+    return `Branch #${forkedAtIndex + 1}`;
+  }
+
+  let text = targetMsg.text.trim();
+  // Strip code blocks and markdown formatting
+  text = text.replace(/```[\s\S]*?```/g, "").replace(/`[^`]*`/g, "");
+  // Remove common conversational prefixes
+  text = text.replace(/^(hey|hi|hello|please|can you|could you|help me|how do i|how to|what is|why is|explain)\b\s*/i, "");
+  text = text.replace(/^(i want to|i am trying to|i need to|i am working on|we need to)\b\s*/i, "");
+  text = text.replace(/[^\w\s-]/g, " ").replace(/\s+/g, " ").trim();
+
+  const words = text.split(" ").filter((w) => w.length > 1).slice(0, 5);
+  if (words.length >= 2) {
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+  }
+
+  return `Branch Turn #${forkedAtIndex + 1}`;
+}
+
 async function getOrCreateParent(options: ForkOptions): Promise<BranchNode | null> {
   if (options.parentNodeId) {
     return (await db.nodes.get(options.parentNodeId)) || null;
@@ -35,12 +58,24 @@ async function getOrCreateParent(options: ForkOptions): Promise<BranchNode | nul
 
   // A conversation can predate Forkline. Represent it once as a root so all
   // subsequently-created forks have a stable, visible parent.
+  let rootLabel = options.sourceChat.title;
+  if (!rootLabel || rootLabel.toLowerCase().includes("conversation") || rootLabel.toLowerCase() === "new chat") {
+    try {
+      const settings = await getSettings();
+      if (await isGeminiConfigured(settings)) {
+        const firstExchange = options.messages.slice(0, 4).map((m) => `[${m.role}]: ${m.text}`).join("\n\n");
+        const rootAiTitle = await nameBranchWithGemini(firstExchange, settings);
+        if (rootAiTitle) rootLabel = rootAiTitle;
+      }
+    } catch {}
+  }
+
   const root: BranchNode = {
     id: crypto.randomUUID(),
     parentId: null,
     chat: options.sourceChat,
     forkedAtIndex: null,
-    label: options.sourceChat.title || `${options.sourceChat.site} conversation`,
+    label: rootLabel || options.sourceChat.title || `${options.sourceChat.site} conversation`,
     tags: [options.sourceChat.site, "source"],
     tokenEstimate: 0,
     compaction: "none",
@@ -107,10 +142,36 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
 
   const tokenEstimate = estimateTokens(fullText);
 
-  // Compute instantaneous branch label from message preview
-  const lastMsg = messagesToFork[messagesToFork.length - 1];
-  const preview = lastMsg?.text.slice(0, 32).trim() || "Turn";
-  const instantLabel = options.label || `Turn #${forkedAtIndex + 1}: "${preview}..."`;
+  // Resolve proper branch title: use user custom title or generate with Gemini LLM
+  let branchTitle = options.label?.trim();
+
+  if (!branchTitle) {
+    if (await isGeminiConfigured(settings)) {
+      // Feed the last relevant turns into Gemini for crisp, accurate branch titling
+      const titleContext = messagesToFork
+        .slice(-6)
+        .map((m) => `[${m.role === "user" ? "User" : "Assistant"}]: ${m.text}`)
+        .join("\n\n");
+      const aiTitle = await nameBranchWithGemini(titleContext, settings);
+      if (aiTitle) {
+        branchTitle = aiTitle;
+      }
+    } else if (settings.useGeminiNano && (await nanoAvailable())) {
+      const aiTitle = await nameBranchNano(contextText);
+      if (aiTitle) {
+        branchTitle = aiTitle;
+      }
+    } else if (settings.cloudProxyUrl) {
+      const aiTitle = await nameBranchRemote(contextText, settings);
+      if (aiTitle) {
+        branchTitle = aiTitle;
+      }
+    }
+
+    if (!branchTitle) {
+      branchTitle = generateCleanFallbackTitle(messagesToFork, forkedAtIndex);
+    }
+  }
 
   // Iterate over all target sites (immediate tab creation without blocking)
   for (const targetSite of targetSites) {
@@ -123,7 +184,7 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
       groupId: parent?.groupId || options.groupId || null,
       chat: null,
       forkedAtIndex,
-      label: targetSites.length > 1 ? `${instantLabel} (${targetSite})` : instantLabel,
+      label: targetSites.length > 1 ? `${branchTitle} (${targetSite})` : branchTitle,
       tags: [targetSite, compaction === "summary" ? "compacted" : "full"],
       tokenEstimate,
       compaction,
@@ -155,40 +216,12 @@ export async function handleForkRequest(options: ForkOptions): Promise<{ nodeIds
     }
   }
 
-  // Async background auto-naming without blocking tab launch
-  if (!options.label) {
-    (async () => {
-      try {
-        let aiTitle: string | null = null;
-        if (await isGeminiConfigured(settings)) {
-          aiTitle = await nameBranchWithGemini(contextText, settings);
-        } else if (settings.useGeminiNano && (await nanoAvailable())) {
-          aiTitle = await nameBranchNano(contextText);
-        } else if (settings.cloudProxyUrl) {
-          aiTitle = await nameBranchRemote(contextText, settings);
-        }
-
-        if (aiTitle) {
-          for (const id of createdNodeIds) {
-            const n = await db.nodes.get(id);
-            if (n) {
-              n.label = targetSites.length > 1 ? `${aiTitle} (${n.tags[0]})` : aiTitle;
-              await saveNode(n);
-            }
-          }
-        }
-      } catch (err) {
-        console.debug("[Forkline] Background naming skipped:", err);
-      }
-    })();
-  }
-
   // Multi-model tab grouping
   if (createdTabIds.length > 1 && chrome.tabGroups) {
     try {
       const groupId = await chrome.tabs.group({ tabIds: createdTabIds });
       await chrome.tabGroups.update(groupId, {
-        title: `Forkline: ${instantLabel.slice(0, 20)}`,
+        title: `Forkline: ${branchTitle.slice(0, 24)}`,
         color: "grey",
       });
     } catch (err) {

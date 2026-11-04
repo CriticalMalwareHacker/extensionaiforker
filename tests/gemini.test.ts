@@ -128,5 +128,28 @@ describe("Gemini LLM Integration", () => {
 
       expect(title).toBe("Redis Queue Architecture");
     });
+
+    it("strips prefixes like 'Branch:' and markdown styling", async () => {
+      const mockResponse = {
+        candidates: [
+          {
+            content: {
+              parts: [{ text: 'Branch: **OpenRouter RAG Implementation**' }],
+            },
+          },
+        ],
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const title = await nameBranchWithGemini("Discussing OpenRouter RAG", {
+        geminiApiKey: "AIzaValidKey",
+      } as any);
+
+      expect(title).toBe("OpenRouter RAG Implementation");
+    });
   });
 });

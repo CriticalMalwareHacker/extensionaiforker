@@ -72,6 +72,7 @@ if (!adapter) {
       excludedIndexes?: number[];
       compaction?: "none" | "summary";
       targetSites?: Site[];
+      label?: string;
     }
   ) {
     if (!hasExtensionContext()) {
@@ -90,6 +91,7 @@ if (!adapter) {
         targetSites,
         messages,
         forkedAtIndex: index,
+        label: customOptions?.label,
         excludedIndexes: customOptions?.excludedIndexes || [],
         compaction: customOptions?.compaction || "none",
         sourceChat: currentConvId

@@ -22,6 +22,7 @@ export function openSelectiveForkModal(options: ModalOptions): void {
   const availableMessages = messages.filter((m) => m.index <= currentIndex);
   const excludedSet = new Set<number>();
   let compaction: "none" | "summary" = "none";
+  let customLabel = "";
   const selectedSites = new Set<Site>([currentSite === "google" ? "chatgpt" : currentSite]);
 
   const backdrop = document.createElement("div");
@@ -113,6 +114,21 @@ export function openSelectiveForkModal(options: ModalOptions): void {
           <span style="font-size: 11px; color: ${status.exceedsWarning ? "#f43f5e" : "#888888"}; font-weight: 500;">
             ${status.exceedsMax ? "Exceeds recommended limit" : status.exceedsWarning ? "High token count" : "Optimal"}
           </span>
+        </div>
+
+        <!-- Branch Title -->
+        <div>
+          <label style="font-size: 12px; font-weight: 600; color: #ffffff; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span>Branch Title</span>
+            <span style="font-size: 10px; color: #888888; font-weight: 400;">Auto-named by Gemini if blank</span>
+          </label>
+          <input
+            type="text"
+            id="branch-title-input"
+            value="${customLabel}"
+            placeholder="e.g. OpenRouter RAG Architecture (leave blank for AI)"
+            style="width: 100%; box-sizing: border-box; padding: 9px 12px; background: #1d1d1d; border: 1px solid #303030; border-radius: 10px; color: #ffffff; font-size: 12px; font-family: inherit; outline: none;"
+          />
         </div>
 
         <!-- Target Platform(s) (matches ss1.png) -->
@@ -247,12 +263,17 @@ export function openSelectiveForkModal(options: ModalOptions): void {
       });
     });
 
+    modal.querySelector("#branch-title-input")?.addEventListener("input", (e: any) => {
+      customLabel = e.target.value;
+    });
+
     modal.querySelector("#modal-fork-btn")?.addEventListener("click", () => {
       cleanup();
       onConfirm({
         excludedIndexes: Array.from(excludedSet),
         compaction,
         targetSites: Array.from(selectedSites),
+        customLabel: customLabel.trim() || undefined,
       });
     });
   };

@@ -27,7 +27,22 @@ RULES:
 const MERGE_SYSTEM_INSTRUCTION = `You are a technical synthesizer for conversation branches.
 Summarize the findings, solution, architectural changes, and key takeaways from this side branch exploration in under 200 words. Focus strictly on conclusions, actionable code snippets, and decisions ready to integrate back into the main thread.`;
 
-const TITLE_SYSTEM_INSTRUCTION = `Generate a concise, descriptive 3 to 5 word title for this conversation branch. Output ONLY the title, no quotes, no markdown, no punctuation.`;
+const TITLE_SYSTEM_INSTRUCTION = `You are an expert at naming conversation branches for software developers and researchers.
+Analyze the provided conversation history and generate a concise, highly descriptive 3 to 5 word title that captures the core technical topic, question, or goal being explored in this branch.
+
+Examples of great titles:
+- "OpenRouter RAG Implementation"
+- "Redis Queue Stream Architecture"
+- "Docker Multi-Stage Build Fix"
+- "FastAPI JWT Authentication"
+- "Next.js Hydration Error Debug"
+
+RULES:
+- Exactly 3 to 5 words.
+- Specific, professional, and descriptive.
+- Capitalize Major Words (Title Case).
+- Output ONLY the plain text title.
+- Do NOT include quotes, brackets, markdown, prefixes like "Branch:", or ending punctuation.`;
 
 /**
  * Resolves the active Gemini API key from settings or Vite/process environment.
@@ -200,7 +215,13 @@ export async function nameBranchWithGemini(
 
     if (textOutput && typeof textOutput === "string") {
       const firstLine = textOutput.trim().replace(/\r?\n.*/s, "").trim();
-      return firstLine.replace(/^["'`]+|["'`]+$/g, "").trim();
+      let cleanTitle = firstLine
+        .replace(/^(Branch|Title|Topic|Name)\s*:\s*/i, "")
+        .replace(/^["'`#*_\-:\s]+|["'`#*_\-:\s]+$/g, "")
+        .trim();
+      if (cleanTitle.length >= 3) {
+        return cleanTitle;
+      }
     }
 
     return null;

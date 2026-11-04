@@ -52,17 +52,22 @@ if (!adapter) {
     );
   }
 
-  // 2. Debounced button injection
+  // 2. Button injection
   let debounceTimer: any = null;
+
+  function runInjection() {
+    if (!hasExtensionContext()) return;
+    injectForkButtons(adapter, (index, customOptions) => {
+      handleForkClick(index, customOptions);
+    });
+  }
 
   function scheduleButtonInjection() {
     if (!hasExtensionContext()) return;
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
-      injectForkButtons(adapter, (index, customOptions) => {
-        handleForkClick(index, customOptions);
-      });
-    }, 350);
+      runInjection();
+    }, 150);
   }
 
   // 3. Handle user clicking fork on a message
@@ -130,7 +135,12 @@ if (!adapter) {
   }
 
   // Initial injection
+  runInjection();
   scheduleButtonInjection();
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", runInjection);
+  }
+  window.addEventListener("load", runInjection);
 
   // 4. MutationObserver on chat container / body
   const observer = new MutationObserver(() => {

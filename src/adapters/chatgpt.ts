@@ -3,8 +3,17 @@ import { Message, Site } from "../shared/types";
 
 const SELECTORS = {
   authorRole: "[data-message-author-role]",
-  messageTurn: "[data-testid^=\"conversation-turn\"], [data-message-author-role], article",
-  codeBlock: "pre",
+  messageTurn: [
+    "article",
+    '[data-testid*="-turn"]',
+    '[data-testid="agent-turn"]',
+    '[data-testid="user-turn"]',
+    '[data-testid^="conversation-turn"]',
+    "[data-message-author-role]",
+    "[data-message-id]",
+    "div.text-message",
+  ].join(", "),
+  codeBlock: "pre, .code-block",
   attachments: "img[alt*=\"Uploaded\"], [data-testid*=\"attachment\"], [aria-label*=\"attachment\" i]",
   inputBox: "#prompt-textarea, textarea[data-id=\"root\"], div#prompt-textarea[contenteditable=\"true\"]",
   chatContainer: "main, [role=\"main\"], .conversation-container",
@@ -28,21 +37,35 @@ export class ChatGPTAdapter implements SiteAdapter {
   }
 
   getMessageElements(): HTMLElement[] {
-    // 1. Primary: [data-message-author-role] is ChatGPT's universal turn marker
+    // 1. Primary: <article> tags - ChatGPT wraps every user & assistant turn inside an <article>
+    const articles = Array.from(document.querySelectorAll<HTMLElement>("article"));
+    if (articles.length > 0) {
+      return articles;
+    }
+
+    // 2. Modern ChatGPT data-testid turns: agent-turn, user-turn, conversation-turn
+    const testidTurns = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '[data-testid*="-turn"], [data-testid="agent-turn"], [data-testid="user-turn"], [data-testid^="conversation-turn"]'
+      )
+    );
+    if (testidTurns.length > 0) {
+      const topTurns = testidTurns.filter(
+        (el) => !testidTurns.some((other) => other !== el && other.contains(el))
+      );
+      if (topTurns.length > 0) return topTurns;
+    }
+
+    // 3. Fallback: [data-message-author-role]
     const roleElements = Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.authorRole));
     if (roleElements.length > 0) {
-      return roleElements;
+      const topTurns = roleElements.filter(
+        (el) => !roleElements.some((other) => other !== el && other.contains(el))
+      );
+      if (topTurns.length > 0) return topTurns;
     }
 
-    // 2. Fallback: conversation turns with data-testid
-    const turns = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-testid^=\"conversation-turn\"]")
-    );
-    if (turns.length > 0) {
-      return turns;
-    }
-
-    // 3. Last fallback: article turns
+    // 4. Fallback: messageTurn
     return Array.from(document.querySelectorAll<HTMLElement>(SELECTORS.messageTurn));
   }
 
@@ -51,6 +74,14 @@ export class ChatGPTAdapter implements SiteAdapter {
     if (!roleAttr) {
       const childRole = el.querySelector<HTMLElement>(SELECTORS.authorRole);
       roleAttr = childRole ? childRole.getAttribute("data-message-author-role") : null;
+    }
+
+    // Check data-testid="user-turn" or "agent-turn" if roleAttr not found
+    if (!roleAttr) {
+      const isUser =
+        el.matches('[data-testid*="user"], [class*="user-turn"]') ||
+        Boolean(el.querySelector('[data-testid*="user"], [class*="user-turn"], [aria-label*="Edit" i]'));
+      roleAttr = isUser ? "user" : "assistant";
     }
 
     const role: "user" | "assistant" = roleAttr === "user" ? "user" : "assistant";

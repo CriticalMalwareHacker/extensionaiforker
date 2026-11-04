@@ -43,6 +43,35 @@ describe("Site Adapters", () => {
       expect(msg2.role).toBe("user");
       expect(msg2.hasAttachments).toBe(true);
     });
+
+    it("extracts messages from modern ChatGPT structure with article and user-turn/agent-turn", () => {
+      document.body.innerHTML = `
+        <main>
+          <article data-testid="user-turn">
+            <div>
+              <p>How do I configure Vite for Chrome extensions?</p>
+            </div>
+          </article>
+          <article data-testid="agent-turn">
+            <div>
+              <p>Configure multiple entry points in vite.config.ts for content and background.</p>
+              <pre><code>export default defineConfig({...})</code></pre>
+            </div>
+          </article>
+        </main>
+      `;
+
+      const elements = adapter.getMessageElements();
+      expect(elements.length).toBe(2);
+
+      const msg0 = adapter.readMessage(elements[0], 0);
+      expect(msg0.role).toBe("user");
+      expect(msg0.text).toContain("configure Vite");
+
+      const msg1 = adapter.readMessage(elements[1], 1);
+      expect(msg1.role).toBe("assistant");
+      expect(msg1.text).toContain("multiple entry points");
+    });
   });
 
   describe("ClaudeAdapter", () => {

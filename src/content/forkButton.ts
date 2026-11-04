@@ -157,8 +157,9 @@ export function injectForkButtons(
     const isUser =
       el.tagName.toLowerCase().includes("user") ||
       el.getAttribute("data-message-author-role") === "user" ||
-      Boolean(el.matches?.('[data-testid="user-message"], div.font-user-message, div[class*="font-user"], div.human-message, [data-testid*="user"]')) ||
-      Boolean(el.querySelector?.('[data-testid="user-message"], div.font-user-message'));
+      el.querySelector?.('[data-message-author-role="user"]') !== null ||
+      Boolean(el.matches?.('[data-testid*="user"], [data-testid="user-turn"], [data-testid="user-message"], div.font-user-message, div[class*="font-user"], div.human-message')) ||
+      Boolean(el.querySelector?.('[data-testid*="user"], [data-testid="user-turn"], [data-testid="user-message"], div.font-user-message'));
 
     const inlineRow = document.createElement("div");
     inlineRow.className = "forkline-inline-row";
@@ -170,6 +171,8 @@ export function injectForkButtons(
       marginTop: "8px",
       marginBottom: "4px",
       clear: "both",
+      position: "relative",
+      zIndex: "50",
     });
     inlineRow.appendChild(btnContainer);
     el.appendChild(inlineRow);
